@@ -93,10 +93,6 @@ nga_wp <- nga_wp %>% mutate(pct_functional = `wpt functional`/`total wpt`) %>% m
 ```
 
 ```{r}
-nga_wp <- nga_wp %>% mutate(pct_functional = replace_na(pct_functional, 0)) %>% mutate(`pct_non-functional` = replace_na(`pct_non-functional`, 0))
-```
-
-```{r}
 #| eval: false
 write_rds(nga_wp, "geodata/nga_wp.rds")
 ```
@@ -168,6 +164,10 @@ bperm_ad= moran.mc(nga_wp$`pct_functional`,
             zero.policy = TRUE, 
             na.action=na.omit)
 bperm_ad
+```
+
+```{r}
+nga_wp <- nga_wp %>% mutate(pct_functional = replace_na(pct_functional, 0)) %>% mutate(`pct_non-functional` = replace_na(`pct_non-functional`, 0))
 ```
 
 ```{r}

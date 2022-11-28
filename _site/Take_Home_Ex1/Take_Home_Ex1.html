@@ -203,7 +203,24 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#import-boundaries-shapefile-into-r" id="toc-import-boundaries-shapefile-into-r" class="nav-link active" data-scroll-target="#import-boundaries-shapefile-into-r">Import Boundaries Shapefile into R</a></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started">Getting Started</a></li>
+  <li><a href="#importing-geospatial-data" id="toc-importing-geospatial-data" class="nav-link" data-scroll-target="#importing-geospatial-data">Importing Geospatial Data</a>
+  <ul class="collapse">
+  <li><a href="#importing-water-point-geospatial-data-into-r" id="toc-importing-water-point-geospatial-data-into-r" class="nav-link" data-scroll-target="#importing-water-point-geospatial-data-into-r">Importing Water Point Geospatial Data into R</a></li>
+  <li><a href="#importing-nigeria-boundaries-geospatial-data-into-r" id="toc-importing-nigeria-boundaries-geospatial-data-into-r" class="nav-link" data-scroll-target="#importing-nigeria-boundaries-geospatial-data-into-r">Importing Nigeria Boundaries Geospatial Data into R</a></li>
+  </ul></li>
+  <li><a href="#data-wrangling" id="toc-data-wrangling" class="nav-link" data-scroll-target="#data-wrangling">Data Wrangling</a>
+  <ul class="collapse">
+  <li><a href="#visualizing-the-column-of-interest" id="toc-visualizing-the-column-of-interest" class="nav-link" data-scroll-target="#visualizing-the-column-of-interest">Visualizing the column of interest</a></li>
+  <li><a href="#number-of-waterpoints-in-each-polygons" id="toc-number-of-waterpoints-in-each-polygons" class="nav-link" data-scroll-target="#number-of-waterpoints-in-each-polygons">Number of waterpoints in each polygons</a></li>
+  <li><a href="#saving-the-analytical-data-table" id="toc-saving-the-analytical-data-table" class="nav-link" data-scroll-target="#saving-the-analytical-data-table">Saving the analytical data table</a></li>
+  </ul></li>
+  <li><a href="#visualizing-the-spatial-distribution-of-waterpoints" id="toc-visualizing-the-spatial-distribution-of-waterpoints" class="nav-link" data-scroll-target="#visualizing-the-spatial-distribution-of-waterpoints">Visualizing the spatial distribution of waterpoints</a></li>
+  <li><a href="#computing-contiguity-spatial-weight" id="toc-computing-contiguity-spatial-weight" class="nav-link" data-scroll-target="#computing-contiguity-spatial-weight">Computing Contiguity Spatial Weight</a>
+  <ul class="collapse">
+  <li><a href="#adaptive-distance-weight-matrix" id="toc-adaptive-distance-weight-matrix" class="nav-link" data-scroll-target="#adaptive-distance-weight-matrix">Adaptive Distance Weight Matrix</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -226,16 +243,35 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p>Overview</p>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
 <p>This is take home exercise 1</p>
-<p>Getting Started</p>
+</section>
+<section id="getting-started" class="level2">
+<h2 class="anchored" data-anchor-id="getting-started">Getting Started</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, spdep, tmap, tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(sf, tidyverse, tmap, spdep, funModeling)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<section id="import-boundaries-shapefile-into-r" class="level2">
-<h2 class="anchored" data-anchor-id="import-boundaries-shapefile-into-r">Import Boundaries Shapefile into R</h2>
+</section>
+<section id="importing-geospatial-data" class="level2">
+<h2 class="anchored" data-anchor-id="importing-geospatial-data">Importing Geospatial Data</h2>
+<section id="importing-water-point-geospatial-data-into-r" class="level3">
+<h3 class="anchored" data-anchor-id="importing-water-point-geospatial-data-into-r">Importing Water Point Geospatial Data into R</h3>
+<section id="recoding-na-into-string-and-reducing-file-size-for-upload-to-git" class="level4">
+<h4 class="anchored" data-anchor-id="recoding-na-into-string-and-reducing-file-size-for-upload-to-git">Recoding NA into string and reducing file size for upload to Git</h4>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>nigeria_boundaries <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data"</span>, <span class="at">layer =</span> <span class="st">"geoBoundaries-NGA-ADM2"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>wp <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data"</span>, <span class="at">layer =</span> <span class="st">"geo_export"</span>, <span class="at">crs =</span> <span class="dv">4326</span>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(clean_coun <span class="sc">==</span> <span class="st">"Nigeria"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>wp_1 <span class="ot">&lt;-</span> wp <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">status_cle =</span> <span class="fu">replace_na</span>(status_cle, <span class="st">"Unknown"</span>)) <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>, <span class="dv">9</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">18</span><span class="sc">:</span><span class="dv">23</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>wp_nga <span class="ot">&lt;-</span> <span class="fu">write_rds</span>(wp_1, <span class="st">"geodata/wp_nga.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="importing-nigeria-boundaries-geospatial-data-into-r" class="level3">
+<h3 class="anchored" data-anchor-id="importing-nigeria-boundaries-geospatial-data-into-r">Importing Nigeria Boundaries Geospatial Data into R</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>nga <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="at">dsn =</span> <span class="st">"data"</span>, <span class="at">layer =</span> <span class="st">"geoBoundaries-NGA-ADM2"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Reading layer `geoBoundaries-NGA-ADM2' from data source 
   `C:\sjynic\ISSS624\Take_Home_Ex1\data' using driver `ESRI Shapefile'
@@ -246,8 +282,365 @@ Bounding box:  xmin: 2.668534 ymin: 4.273007 xmax: 14.67882 ymax: 13.89442
 Geodetic CRS:  WGS 84</code></pre>
 </div>
 </div>
+</section>
+</section>
+<section id="data-wrangling" class="level2">
+<h2 class="anchored" data-anchor-id="data-wrangling">Data Wrangling</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>wp_nga <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"geodata/wp_nga.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="visualizing-the-column-of-interest" class="level3">
+<h3 class="anchored" data-anchor-id="visualizing-the-column-of-interest">Visualizing the column of interest</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">freq</span>(<span class="at">data =</span> wp_nga, <span class="at">input =</span> <span class="st">'status_cle'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The `&lt;scale&gt;` argument of `guides()` cannot be `FALSE`. Use "none" instead as
+of ggplot2 3.3.4.
+ℹ The deprecated feature was likely used in the funModeling package.
+  Please report the issue at &lt;https://github.com/pablo14/funModeling/issues&gt;.</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Take_Home_Ex1_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        status_cle frequency percentage cumulative_perc
+1                       Functional     45883      48.29           48.29
+2                   Non-Functional     29385      30.93           79.22
+3                          Unknown     10656      11.22           90.44
+4      Functional but needs repair      4579       4.82           95.26
+5 Non-Functional due to dry season      2403       2.53           97.79
+6        Functional but not in use      1686       1.77           99.56
+7         Abandoned/Decommissioned       234       0.25           99.81
+8                        Abandoned       175       0.18           99.99
+9 Non functional due to dry season         7       0.01          100.00</code></pre>
+</div>
+</div>
+<p>The status can be divided into 3 broad categories, ‘Functional’ (includes ‘Functional but needs repair’, ‘Functional but not in sure’ and ‘Functional’), ‘Non-Functional’ (includes ‘Non-Functional’, ‘Non-Functional due to dry season’, ‘Non functional due to dry season’, ‘Abandoned’ and ‘Abandoned/Decommissioned’) and lastly ‘Unknown’.</p>
+<section id="first-category-funtional-waterpoint" class="level4">
+<h4 class="anchored" data-anchor-id="first-category-funtional-waterpoint">First category ‘Funtional’ waterpoint</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>wpt_functional <span class="ot">&lt;-</span> wp_nga <span class="sc">%&gt;%</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(status_cle <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Functional"</span>, <span class="st">"Functional but not in use"</span>, <span class="st">"Functional but need repair"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">freq</span>(<span class="at">data =</span> wpt_functional, <span class="at">input =</span> <span class="st">"status_cle"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Take_Home_Ex1_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                 status_cle frequency percentage cumulative_perc
+1                Functional     45883      96.46           96.46
+2 Functional but not in use      1686       3.54          100.00</code></pre>
+</div>
+</div>
+</section>
+<section id="second-category-non-functional-waterpoint" class="level4">
+<h4 class="anchored" data-anchor-id="second-category-non-functional-waterpoint">Second category ‘Non-Functional’ waterpoint</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>wpt_nonfunctional <span class="ot">&lt;-</span> wp_nga <span class="sc">%&gt;%</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(status_cle <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Abandoned/Decommissioned"</span>, <span class="st">"Abandoned"</span>, <span class="st">"Non-Functional"</span>, <span class="st">"Non functional due to dry season"</span>, <span class="st">"Non-Functional due to dry season"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">freq</span>(<span class="at">data=</span>wpt_nonfunctional, <span class="at">input =</span> <span class="st">'status_cle'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Take_Home_Ex1_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        status_cle frequency percentage cumulative_perc
+1                   Non-Functional     29385      91.25           91.25
+2 Non-Functional due to dry season      2403       7.46           98.71
+3         Abandoned/Decommissioned       234       0.73           99.44
+4                        Abandoned       175       0.54           99.98
+5 Non functional due to dry season         7       0.02          100.00</code></pre>
+</div>
+</div>
+</section>
+<section id="third-catergory-unknown-waterpoint" class="level4">
+<h4 class="anchored" data-anchor-id="third-catergory-unknown-waterpoint">Third catergory ‘Unknown’ waterpoint</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>wpt_unknown <span class="ot">&lt;-</span> wp_nga <span class="sc">%&gt;%</span> <span class="fu">filter</span>(status_cle <span class="sc">==</span> <span class="st">"Unknown"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">freq</span>(<span class="at">data=</span>wpt_unknown, <span class="at">input =</span> <span class="st">'status_cle'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Take_Home_Ex1_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  status_cle frequency percentage cumulative_perc
+1    Unknown     10656        100             100</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="number-of-waterpoints-in-each-polygons" class="level3">
+<h3 class="anchored" data-anchor-id="number-of-waterpoints-in-each-polygons">Number of waterpoints in each polygons</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>nga_wp <span class="ot">&lt;-</span> nga <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="st">`</span><span class="at">total wpt</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(nga, wp_nga))) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="st">`</span><span class="at">wpt functional</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(nga, wpt_functional))) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="st">`</span><span class="at">wpt non-functional</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(nga, wpt_nonfunctional))) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="st">`</span><span class="at">wpt unknown</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">lengths</span>(<span class="fu">st_intersects</span>(nga, wpt_unknown)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="saving-the-analytical-data-table" class="level3">
+<h3 class="anchored" data-anchor-id="saving-the-analytical-data-table">Saving the analytical data table</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>nga_wp <span class="ot">&lt;-</span> nga_wp <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">pct_functional =</span> <span class="st">`</span><span class="at">wpt functional</span><span class="st">`</span><span class="sc">/</span><span class="st">`</span><span class="at">total wpt</span><span class="st">`</span>) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="st">`</span><span class="at">pct_non-functional</span><span class="st">`</span> <span class="ot">=</span> <span class="st">`</span><span class="at">wpt non-functional</span><span class="st">`</span><span class="sc">/</span><span class="st">`</span><span class="at">total wpt</span><span class="st">`</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write_rds</span>(nga_wp, <span class="st">"geodata/nga_wp.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="visualizing-the-spatial-distribution-of-waterpoints" class="level2">
+<h2 class="anchored" data-anchor-id="visualizing-the-spatial-distribution-of-waterpoints">Visualizing the spatial distribution of waterpoints</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>nga_wp <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"geodata/nga_wp.rds"</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>total <span class="ot">&lt;-</span> <span class="fu">qtm</span>(nga_wp, <span class="st">"total wpt"</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>wp_functional <span class="ot">&lt;-</span> <span class="fu">qtm</span>(nga_wp, <span class="st">"wpt functional"</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>wp_nonfunctional <span class="ot">&lt;-</span> <span class="fu">qtm</span>(nga_wp, <span class="st">"wpt non-functional"</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>unknown <span class="ot">&lt;-</span> <span class="fu">qtm</span>(nga_wp, <span class="st">"wpt unknown"</span>)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tmap_arrange</span>(total, wp_functional, wp_nonfunctional, unknown, <span class="at">asp=</span><span class="dv">1</span>, <span class="at">ncol=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Take_Home_Ex1_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="1344"></p>
+</div>
+</div>
+</section>
+<section id="computing-contiguity-spatial-weight" class="level2">
+<h2 class="anchored" data-anchor-id="computing-contiguity-spatial-weight">Computing Contiguity Spatial Weight</h2>
+<section id="adaptive-distance-weight-matrix" class="level3">
+<h3 class="anchored" data-anchor-id="adaptive-distance-weight-matrix">Adaptive Distance Weight Matrix</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>longitude <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(nga_wp<span class="sc">$</span>geometry, <span class="sc">~</span><span class="fu">st_centroid</span>(.x)[[<span class="dv">1</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>latitude <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(nga_wp<span class="sc">$</span>geometry, <span class="sc">~</span><span class="fu">st_centroid</span>(.x)[[<span class="dv">2</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>coords <span class="ot">&lt;-</span> <span class="fu">cbind</span>(longitude, latitude)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(coords)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     longitude  latitude
+[1,]  7.372450  5.113107
+[2,]  7.352131  5.083219
+[3,] 13.322900 13.428835
+[4,]  6.847325  8.825812
+[5,]  7.771541  5.022061
+[6,]  8.219654  6.259845</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>knn8 <span class="ot">&lt;-</span> <span class="fu">knn2nb</span>(<span class="fu">knearneigh</span>(coords, <span class="at">k=</span><span class="dv">8</span>))</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>knn8</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Neighbour list object:
+Number of regions: 774 
+Number of nonzero links: 6192 
+Percentage nonzero weights: 1.033592 
+Average number of links: 8 
+Non-symmetric neighbours list</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(knn8)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>List of 774
+ $ : int [1:8] 2 321 364 548 597 624 721 725
+ $ : int [1:8] 1 321 548 597 624 721 725 726
+ $ : int [1:8] 250 261 447 477 492 507 509 526
+ $ : int [1:8] 12 20 257 263 446 454 466 690
+ $ : int [1:8] 203 208 286 288 331 334 539 738
+ $ : int [1:8] 170 217 218 337 379 553 577 601
+ $ : int [1:8] 8 176 214 281 283 306 544 555
+ $ : int [1:8] 7 214 281 306 327 544 555 651
+ $ : int [1:8] 18 19 218 337 574 576 601 757
+ $ : int [1:8] 25 216 325 364 365 528 552 632
+ $ : int [1:8] 26 27 43 68 191 524 565 762
+ $ : int [1:8] 135 263 417 429 446 454 690 695
+ $ : int [1:8] 31 37 211 320 393 570 583 584
+ $ : int [1:8] 170 363 379 546 563 577 581 589
+ $ : int [1:8] 22 49 82 177 297 306 580 623
+ $ : int [1:8] 30 187 188 296 328 357 360 635
+ $ : int [1:8] 35 275 295 378 460 591 638 639
+ $ : int [1:8] 9 19 218 376 574 576 601 757
+ $ : int [1:8] 9 18 56 103 376 574 576 601
+ $ : int [1:8] 4 106 125 239 263 419 454 466
+ $ : int [1:8] 60 61 162 269 520 578 596 626
+ $ : int [1:8] 49 297 326 443 515 623 682 693
+ $ : int [1:8] 54 291 292 536 537 614 618 619
+ $ : int [1:8] 84 123 437 476 527 652 673 761
+ $ : int [1:8] 10 181 216 314 325 366 552 730
+ $ : int [1:8] 11 27 68 191 336 439 562 762
+ $ : int [1:8] 11 26 191 439 562 565 663 762
+ $ : int [1:8] 29 178 299 300 301 358 369 598
+ $ : int [1:8] 172 173 178 182 358 378 460 591
+ $ : int [1:8] 16 39 41 186 192 329 357 360
+ $ : int [1:8] 13 37 211 289 561 570 583 584
+ $ : int [1:8] 51 62 461 462 515 623 682 693
+ $ : int [1:8] 47 166 227 238 242 655 743 750
+ $ : int [1:8] 42 104 136 137 213 553 559 757
+ $ : int [1:8] 17 275 276 277 278 279 295 460
+ $ : int [1:8] 50 107 247 408 432 455 681 759
+ $ : int [1:8] 38 40 211 212 570 583 584 629
+ $ : int [1:8] 30 39 40 41 186 192 320 570
+ $ : int [1:8] 30 38 40 41 186 192 320 329
+ $ : int [1:8] 37 38 39 41 186 192 320 570
+ $ : int [1:8] 30 38 39 40 186 192 360 634
+ $ : int [1:8] 86 136 137 499 587 613 718 734
+ $ : int [1:8] 11 68 157 524 549 565 590 645
+ $ : int [1:8] 16 45 192 290 303 328 360 634
+ $ : int [1:8] 44 187 290 303 328 341 360 599
+ $ : int [1:8] 387 417 429 438 459 521 668 742
+ $ : int [1:8] 33 111 166 234 238 691 698 750
+ $ : int [1:8] 65 113 265 386 407 428 482 701
+ $ : int [1:8] 22 32 297 326 515 623 682 693
+ $ : int [1:8] 36 98 107 247 409 416 432 681
+ $ : int [1:8] 32 62 461 462 515 580 623 693
+ $ : int [1:8] 53 78 165 293 532 602 603 636
+ $ : int [1:8] 52 78 80 165 280 602 621 636
+ $ : int [1:8] 23 79 293 294 532 536 537 618
+ $ : int [1:8] 122 169 246 333 430 571 605 697
+ $ : int [1:8] 77 368 376 533 534 576 601 728
+ $ : int [1:8] 53 58 199 312 322 323 621 622
+ $ : int [1:8] 57 322 323 564 602 603 621 622
+ $ : int [1:8] 88 128 129 259 493 700 714 748
+ $ : int [1:8] 61 158 563 578 589 592 596 626
+ $ : int [1:8] 21 60 269 578 589 592 596 626
+ $ : int [1:8] 32 51 461 462 515 623 682 693
+ $ : int [1:8] 90 237 384 416 467 497 765 772
+ $ : int [1:8] 48 65 74 113 131 265 386 407
+ $ : int [1:8] 48 64 74 113 265 407 683 701
+ $ : int [1:8] 19 103 104 288 331 338 351 574
+ $ : int [1:8] 347 348 560 566 567 609 640 694
+ $ : int [1:8] 11 43 157 190 191 549 590 645
+ $ : int [1:8] 140 146 248 274 473 500 512 513
+ $ : int [1:8] 71 298 299 301 341 343 344 610
+ $ : int [1:8] 70 172 173 298 299 343 344 625
+ $ : int [1:8] 17 361 566 567 568 609 638 639
+ $ : int [1:8] 72 361 374 377 404 607 665 666
+ $ : int [1:8] 65 109 113 251 265 683 741 754
+ $ : int [1:8] 110 272 398 422 433 485 501 768
+ $ : int [1:8] 254 287 427 459 470 547 647 677
+ $ : int [1:8] 56 195 533 534 579 618 619 728
+ $ : int [1:8] 52 54 79 80 165 215 532 636
+ $ : int [1:8] 54 78 165 293 532 579 618 636
+ $ : int [1:8] 52 53 78 165 215 280 636 739
+ $ : int [1:8] 99 145 227 233 426 483 689 760
+ $ : int [1:8] 15 32 49 51 177 352 580 623
+ $ : int [1:8] 132 258 383 414 433 529 767 768
+ $ : int [1:8] 24 131 148 386 437 482 673 692
+ $ : int [1:8] 105 156 267 394 654 675 707 712
+ $ : int [1:8] 42 136 137 499 587 613 718 734
+ $ : int [1:8] 149 151 221 226 399 410 486 657
+ $ : int [1:8] 59 116 128 150 489 648 700 714
+ $ : int [1:8] 260 408 463 542 674 676 681 759
+ $ : int [1:8] 63 163 236 237 384 452 710 765
+ $ : int [1:8] 160 271 388 406 473 475 492 525
+ $ : int [1:8] 95 119 390 391 392 423 487 656
+ $ : int [1:8] 73 354 374 402 594 607 665 666
+ $ : int [1:8] 13 31 60 158 436 561 596 709
+ $ : int [1:8] 92 390 391 392 405 423 469 656
+ $ : int [1:8] 97 139 389 403 420 451 488 653
+ $ : int [1:8] 96 168 389 420 451 653 662 773
+ $ : int [1:8] 50 117 153 231 409 432 696 708
+ $ : int [1:8] 81 145 426 483 667 689 760 769
+  [list output truncated]
+ - attr(*, "region.id")= chr [1:774] "1" "2" "3" "4" ...
+ - attr(*, "call")= language knearneigh(x = coords, k = 8)
+ - attr(*, "sym")= logi FALSE
+ - attr(*, "type")= chr "knn"
+ - attr(*, "knn-k")= num 8
+ - attr(*, "class")= chr "nb"</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(nga_wp<span class="sc">$</span>geometry, <span class="at">border=</span><span class="st">"lightgrey"</span>)</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(knn8, coords, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> <span class="st">"red"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="Take_Home_Ex1_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>rswm_ad <span class="ot">&lt;-</span> <span class="fu">nb2listw</span>(knn8, <span class="at">style=</span><span class="st">"W"</span>, <span class="at">zero.policy =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">moran.test</span>(nga_wp<span class="sc">$</span><span class="st">`</span><span class="at">pct_functional</span><span class="st">`</span>, </span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">listw=</span>rswm_ad, </span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>           <span class="at">zero.policy =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>           <span class="at">na.action=</span>na.omit)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Moran I test under randomisation
+
+data:  nga_wp$pct_functional  
+weights: rswm_ad 
+omitted: 3, 86, 241, 250, 252, 261, 400, 406, 447, 473, 492, 507, 526   
+
+Moran I statistic standard deviate = 31.359, p-value &lt; 2.2e-16
+alternative hypothesis: greater
+sample estimates:
+Moran I statistic       Expectation          Variance 
+     0.5380484916     -0.0013157895      0.0002958303 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>bperm_ad<span class="ot">=</span> <span class="fu">moran.mc</span>(nga_wp<span class="sc">$</span><span class="st">`</span><span class="at">pct_functional</span><span class="st">`</span>, </span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">listw=</span>rswm_ad, </span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">nsim=</span><span class="dv">999</span>, </span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">zero.policy =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">na.action=</span>na.omit)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>bperm_ad</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Monte-Carlo simulation of Moran I
+
+data:  nga_wp$pct_functional 
+weights: rswm_ad 
+omitted: 3, 86, 241, 250, 252, 261, 400, 406, 447, 473, 492, 507, 526 
+number of simulations + 1: 1000 
+
+statistic = 0.53805, observed rank = 1000, p-value = 0.001
+alternative hypothesis: greater</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>nga_wp <span class="ot">&lt;-</span> nga_wp <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">pct_functional =</span> <span class="fu">replace_na</span>(pct_functional, <span class="dv">0</span>)) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="st">`</span><span class="at">pct_non-functional</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">replace_na</span>(<span class="st">`</span><span class="at">pct_non-functional</span><span class="st">`</span>, <span class="dv">0</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>fips_wp <span class="ot">&lt;-</span> <span class="fu">order</span>(nga_wp<span class="sc">$</span>shapeName)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>localMI_wp <span class="ot">&lt;-</span> <span class="fu">localmoran</span>(nga_wp<span class="sc">$</span><span class="st">`</span><span class="at">pct_functional</span><span class="st">`</span>, rswm_ad)</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(localMI_wp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           Ii          E.Ii       Var.Ii       Z.Ii Pr(z != E(Ii))
+1  0.84542213 -1.098697e-03 0.1052193855  2.6096951   9.062296e-03
+2  0.33951212 -1.654843e-04 0.0158628092  2.6969746   6.997260e-03
+3  2.93445092 -4.844691e-03 0.4622235317  4.3233186   1.536995e-05
+4 -0.05487696 -9.606346e-05 0.0092089820 -0.5708517   5.681001e-01
+5 -0.01202210 -1.993161e-06 0.0001910895 -0.8695410   3.845513e-01
+6  0.40561569 -5.012843e-04 0.0480354063  1.8529786   6.388542e-02</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>nga.localMI <span class="ot">&lt;-</span> <span class="fu">cbind</span>(nga_wp,localMI_wp) <span class="sc">%&gt;%</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Pr.Ii =</span> Pr.z....E.Ii..)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tm_shape</span>(nga.localMI) <span class="sc">+</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_fill</span>(<span class="at">col =</span> <span class="st">"Ii"</span>, </span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">style =</span> <span class="st">"pretty"</span>,</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>          <span class="at">palette =</span> <span class="st">"RdBu"</span>,</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>          <span class="at">title =</span> <span class="st">"local moran statistics"</span>) <span class="sc">+</span></span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tm_borders</span>(<span class="at">alpha =</span> <span class="fl">0.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Variable(s) "Ii" contains positive and negative values, so midpoint is set to 0. Set midpoint = NA to show the full spectrum of the color palette.</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="Take_Home_Ex1_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
