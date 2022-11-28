@@ -1,0 +1,191 @@
+---
+title: "Take_Home_Ex1"
+editor: visual
+---
+
+## Overview
+
+This is take home exercise 1
+
+## Getting Started
+
+```{r}
+pacman::p_load(sf, tidyverse, tmap, spdep, funModeling)
+```
+
+## Importing Geospatial Data
+
+### Importing Water Point Geospatial Data into R
+
+#### Recoding NA into string and reducing file size for upload to Git
+
+```{r}
+#| eval: false
+wp <- st_read(dsn = "data", layer = "geo_export", crs = 4326) %>% filter(clean_coun == "Nigeria")
+
+wp_1 <- wp %>% mutate(status_cle = replace_na(status_cle, "Unknown")) %>% select(3:4, 9:10, 18:23)
+  
+wp_nga <- write_rds(wp_1, "geodata/wp_nga.rds")
+```
+
+### Importing Nigeria Boundaries Geospatial Data into R
+
+```{r}
+nga <- st_read(dsn = "data", layer = "geoBoundaries-NGA-ADM2")
+```
+
+## Data Wrangling
+
+```{r}
+wp_nga <- read_rds("geodata/wp_nga.rds")
+```
+
+### Visualizing the column of interest
+
+```{r}
+freq(data = wp_nga, input = 'status_cle')
+```
+
+The status can be divided into 3 broad categories, 'Functional' (includes 'Functional but needs repair', 'Functional but not in sure' and 'Functional'), 'Non-Functional' (includes 'Non-Functional', 'Non-Functional due to dry season', 'Non functional due to dry season', 'Abandoned' and 'Abandoned/Decommissioned') and lastly 'Unknown'.
+
+#### First category 'Funtional' waterpoint
+
+```{r}
+wpt_functional <- wp_nga %>%
+  filter(status_cle %in% c("Functional", "Functional but not in use", "Functional but need repair"))
+```
+
+```{r}
+freq(data = wpt_functional, input = "status_cle")
+```
+
+#### Second category 'Non-Functional' waterpoint
+
+```{r}
+wpt_nonfunctional <- wp_nga %>%
+  filter(status_cle %in% c("Abandoned/Decommissioned", "Abandoned", "Non-Functional", "Non functional due to dry season", "Non-Functional due to dry season"))
+```
+
+```{r}
+freq(data=wpt_nonfunctional, input = 'status_cle')
+```
+
+#### Third catergory 'Unknown' waterpoint
+
+```{r}
+wpt_unknown <- wp_nga %>% filter(status_cle == "Unknown")
+```
+
+```{r}
+freq(data=wpt_unknown, input = 'status_cle')
+```
+
+### Number of waterpoints in each polygons
+
+```{r}
+nga_wp <- nga %>% mutate(`total wpt` = lengths(st_intersects(nga, wp_nga))) %>% mutate(`wpt functional` = lengths(st_intersects(nga, wpt_functional))) %>% mutate(`wpt non-functional` = lengths(st_intersects(nga, wpt_nonfunctional))) %>% mutate(`wpt unknown` = lengths(st_intersects(nga, wpt_unknown)))
+```
+
+### Saving the analytical data table
+
+```{r}
+nga_wp <- nga_wp %>% mutate(pct_functional = `wpt functional`/`total wpt`) %>% mutate(`pct_non-functional` = `wpt non-functional`/`total wpt`)
+```
+
+```{r}
+nga_wp <- nga_wp %>% mutate(pct_functional = replace_na(pct_functional, 0)) %>% mutate(`pct_non-functional` = replace_na(`pct_non-functional`, 0))
+```
+
+```{r}
+#| eval: false
+write_rds(nga_wp, "geodata/nga_wp.rds")
+```
+
+## Visualizing the spatial distribution of waterpoints
+
+```{r}
+#| fig-width: 14
+#| fig-height: 12
+nga_wp <- read_rds("geodata/nga_wp.rds")
+total <- qtm(nga_wp, "total wpt")
+wp_functional <- qtm(nga_wp, "wpt functional")
+wp_nonfunctional <- qtm(nga_wp, "wpt non-functional")
+unknown <- qtm(nga_wp, "wpt unknown")
+
+tmap_arrange(total, wp_functional, wp_nonfunctional, unknown, asp=1, ncol=2)
+```
+
+## Computing Contiguity Spatial Weight
+
+### Adaptive Distance Weight Matrix
+
+```{r}
+longitude <- map_dbl(nga_wp$geometry, ~st_centroid(.x)[[1]])
+```
+
+```{r}
+latitude <- map_dbl(nga_wp$geometry, ~st_centroid(.x)[[2]])
+```
+
+```{r}
+coords <- cbind(longitude, latitude)
+```
+
+```{r}
+head(coords)
+```
+
+```{r}
+knn8 <- knn2nb(knearneigh(coords, k=8))
+knn8
+```
+
+```{r}
+str(knn8)
+```
+
+```{r}
+plot(nga_wp$geometry, border="lightgrey")
+plot(knn8, coords, pch = 19, cex = 0.6, add = TRUE, col = "red")
+```
+
+```{r}
+rswm_ad <- nb2listw(knn8, style="W", zero.policy = TRUE)
+```
+
+```{r}
+moran.test(nga_wp$`pct_functional`, 
+           listw=rswm_ad, 
+           zero.policy = TRUE, 
+           na.action=na.omit)
+```
+
+```{r}
+set.seed(1234)
+bperm_ad= moran.mc(nga_wp$`pct_functional`, 
+            listw=rswm_ad, 
+            nsim=999, 
+            zero.policy = TRUE, 
+            na.action=na.omit)
+bperm_ad
+```
+
+```{r}
+fips_wp <- order(nga_wp$shapeName)
+localMI_wp <- localmoran(nga_wp$`pct_functional`, rswm_ad)
+head(localMI_wp)
+```
+
+```{r}
+nga.localMI <- cbind(nga_wp,localMI_wp) %>%
+  rename(Pr.Ii = Pr.z....E.Ii..)
+```
+
+```{r}
+tm_shape(nga.localMI) +
+  tm_fill(col = "Ii", 
+          style = "pretty",
+          palette = "RdBu",
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+```

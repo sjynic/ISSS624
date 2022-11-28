@@ -1,0 +1,52 @@
+---
+title: "In-class Exercise2"
+editor: visual
+---
+
+## Overview
+
+This is in class exercise 2
+
+## Getting Started
+
+```{r}
+pacman::p_load(sf, tidyverse, tmap, spdep, funModeling)
+```
+
+## Importing Geospatial Data
+
+### Importing Water Point Geospatial Data into R
+
+```{r}
+#| eval: false
+wp <- st_read(dsn = "data", layer = "geo_export", crs = 4326) %>% filter(clean_coun == "Nigeria")
+
+wp_1 <- wp %>% mutate(status_cle = replace_na(status_cle, "Unknown")) %>% select(3:4, 9:10, 18:23)
+  
+wp_nga <- write_rds(wp_1, "geodata/wp_nga.rds")
+```
+
+### Importing Nigeria Boundaries Geospatial Data into R
+
+```{r}
+nga <- st_read(dsn = "data", layer = "geoBoundaries-NGA-ADM2")
+```
+
+Data Wrangling
+
+```{r}
+wp_nga <- read_rds("geodata/wp_nga.rds") %>% mutate(status_cle = replace_na(status_cle, "Unknown"))
+```
+
+```{r}
+freq(data = wp_nga, input = 'status_cle')
+```
+
+```{r}
+wpt_functional <- wp_nga %>%
+  filter(status_cle %in% c("Functional", "Functional but not in use", "Functional but need repair"))
+```
+
+```{r}
+freq(data = wpt_functional, input = "status_cle")
+```

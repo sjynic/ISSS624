@@ -1,0 +1,612 @@
+---
+title: "Hands-on Exercise 1: Geospatial Data Wrangling with R"
+editor: visual
+---
+
+## Overview
+
+This is hands-on exercise 1
+
+## Getting Started
+
+The code chunk below will install and load tidyverse, tmap and sf packages.
+
+```{r}
+pacman::p_load(sf, tmap, tidyverse)
+```
+
+Need to specify pacman as it is not loaded in the library. So the program know which package to use.
+
+This wrapper will avoid typing multiple 'library' to load multiple packages.
+
+## Importing Geospatial Data
+
+### Importing polygon features
+
+This code chunk will import ESRI shapefile into R.
+
+```{r}
+mpsz <- st_read(dsn = "data/geospatial",layer = "MP14_SUBZONE_WEB_PL")
+```
+
+It is different from the longitude and latitude.
+
+### Importing polyline features
+
+This code chunk will import line feature data frame shapefile into R.
+
+```{r}
+cyclingpath <- st_read(dsn = "data/geospatial",layer = "CyclingPath")
+```
+
+Projected coordinate system is good for measuring distance. Flattened the earth.
+
+### Importing and transforming into projected coordinates system
+
+When importing Geographic Information System (GIS) data in kml format, need to enter the whole address instead of writing the destination and the layer. This is because it is a data file by itself (geojson, kml).
+
+```{r}
+preschool <- st_read("data/geospatial/pre-schools-location-kml.kml") %>%
+  st_transform(crs = 3414)
+```
+
+Geodetic coordinate system not good for measuring distance. The coordinate get shorter when deviate from the equator even though the degree is the same.
+
+Can use 'st_transform' to convert WGS 84 to 3414
+
+## Checking the content of a Simple Feature Data Frame
+
+### Working with *st_geometry()*
+
+Geometries - List of space filling curve (sfc) objects
+
+```{r}
+st_geometry(mpsz)
+```
+
+### Working with *glimpse()*
+
+Reveal data type of each field
+
+```{r}
+glimpse(mpsz)
+```
+
+### Working with *head()*
+
+Reveal complete information of a feature object.
+
+```{r}
+head(mpsz)
+```
+
+Allow user to select the number of records to display.
+
+## Plotting Geospatial Data
+
+Allow visualization of geospatial data.
+
+```{r}
+plot(mpsz)
+```
+
+![](http://127.0.0.1:60343/chunk_output/005D44D0DBC8660C/25C2EE32/crjtswrqdtcsh/000010.png)
+
+Default - multiple plots of all attributes, up to a reasonable maximum.
+
+### Plot only Geometry
+
+Geometry only
+
+```{r}
+plot(st_geometry(mpsz))
+```
+
+### Plot only selected attribute
+
+Need to specify the specific attribute to plot.
+
+```{r}
+plot(mpsz["PLN_AREA_N"])
+```
+
+## Working with Projection
+
+Geoprocessing using two geospatial data - both geospatial data need to be using similar coordinate system: **Projection Transformation**
+
+### Assigning European Petroleun Survey Group (EPSG) code to simple feature data frame
+
+Checking the coordinate system of simple feature data frame
+
+```{r}
+st_crs(mpsz)
+```
+
+SVY21 EPSG code is 3414. It is shown as 9001 as above. Wrong EPSG code indicated.
+
+### Setting EPSG code to simple feature data frame
+
+Setting EPSG code
+
+```{r}
+mpsz3414 <- st_set_crs(mpsz, 3414)
+```
+
+Checking EPSG code
+
+```{r}
+st_crs(mpsz3414)
+```
+
+## Importing and Converting An Aspatial Data
+
+Importing data set in CSV format. Use read_csv() of readr package.
+
+```{r}
+listings <- read_csv("data/aspatial/listings.csv")
+```
+
+Examine the imported file by listing it out using list().
+
+```{r}
+list(listings)
+```
+
+### Creating a Simple Feature Data Frame from an Aspatial Data Frame
+
+After importing the listing data frame, convert it into a simple feature data frame using *st_as_sf().*
+
+```{r}
+listings_sf <- st_as_sf(listings, coords = c("longitude", "latitude"), crs = 4326) %>% st_transform(crs = 3414)
+```
+
+*coords* requires two parameters, the column name of the x-coordinates first, then the column name of the y-coordinates.
+
+*crs* requires the coordinate in EPSG format
+
+*%\>%* used for nesting the function *st_transform* to transform the coordinate system of the new simple feature data frame into another coordinate system (shown above)
+
+### Examine the Newly Created Simple Feature Data Frame
+
+```{r}
+glimpse(listings_sf)
+```
+
+## Geoprocessing with sf Package
+
+Introducing two geoprocessing functions, buffering and point in polygon count
+
+### Buffering
+
+Buffer extend the land of the features and their land area
+
+It can be done using the *st_buffer()* to compute the buffers around the features
+
+```{r}
+buffer_cycling <- st_buffer(cyclingpath, dist = 5, nQuadSegs = 30)
+```
+
+This is followed by the calculation of the area of the buffer
+
+```{r}
+buffer_cycling$Area <- st_area(buffer_cycling)
+```
+
+Lastly, the summation of the total land involved using *sum()*
+
+```{r}
+sum(buffer_cycling$Area)
+```
+
+### Point-In-Polygon-Count
+
+Firstly, using the function *st_intersect()* to identify the objects within the features. Then use *length()* to calculate the number of objects that fall within the features.
+
+```{r}
+preschool3414 <- st_transform(preschool, crs = 3414)
+```
+
+```{r}
+mpsz3414$`PreSch Count` <- lengths(st_intersects(mpsz3414, preschool3414))
+```
+
+Check the summary statistic using the function *summary().*
+
+```{r}
+summary(mpsz3414$`PreSch Count`)
+```
+
+To find the feature with the higher number of objects, use function *top_n()*
+
+```{r}
+top_n(mpsz3414, 1, `PreSch Count`)
+```
+
+Calculating Density of the Objects in the Feature
+
+First calculate the area.
+
+```{r}
+mpsz3414$Area <- mpsz3414 %>% st_area()
+```
+
+Then use function *mutate(), to calculate the density*
+
+```{r}
+mpsz3414 <- mpsz3414 %>% mutate(`PreSch Density` = `PreSch Count`/Area * 1000000)
+```
+
+## Exploratory Data Analysis
+
+### Histogram
+
+```{r}
+hist(mpsz3414$`PreSch Density`)
+```
+
+### Using histogram from ggplot2 package
+
+```{r}
+ggplot(data=mpsz3414, aes(x= as.numeric(`PreSch Density`))) + geom_histogram(bins=20, color="black", fill="light blue") + labs(title = "Are pre-school even distributed in Singapore?", subtitle= "There are many planning sub-zones with a single pre-school, on the other hand, \nthere   are two planning sub-zones with at least 20 pre-schools", x = "Pre-school density (per km sq)", y = "Frequency")
+```
+
+### Scatterplot of ggplot2 Package
+
+```{r}
+ggplot(data=mpsz3414, aes(y = `PreSch Count`, x= as.numeric(`PreSch Density`)))+
+geom_point(color="black", fill="light blue") + xlim(0, 40) + ylim(0, 40) + labs(title = "", x = "Pre-school density (per km sq)", y = "Pre-school count")
+```
+
+## Importing Data into R for Choropleth Mapping
+
+### Importing Geospatial Data
+
+```{r}
+mpsz <- st_read(dsn = "data/geospatial", layer = "MP14_SUBZONE_WEB_PL")
+```
+
+### Examine the content of mpsz
+
+```{r}
+mpsz
+```
+
+### Importing Attribute Data
+
+```{r}
+popdata <- read_csv("data/aspatial/respopagesextod2011to2020.csv")
+```
+
+### Data Preparation
+
+#### Data wrangling
+
+-   *pivot_wider()* of tidyr package and
+
+-   *mutate(), filter(), group_by()* and *select()* of dplyr package
+
+```{r}
+popdata2020 <- popdata %>%
+  filter(Time == 2020) %>%
+  group_by(PA, SZ, AG) %>%
+  summarise(`POP` = sum(`Pop`)) %>%
+  ungroup()%>%
+  pivot_wider(names_from=AG, 
+              values_from=POP) %>%
+  mutate(YOUNG = rowSums(.[3:6])
+         +rowSums(.[12])) %>%
+mutate(`ECONOMY ACTIVE` = rowSums(.[7:11])+
+rowSums(.[13:15]))%>%
+mutate(`AGED`=rowSums(.[16:21])) %>%
+mutate(`TOTAL`=rowSums(.[3:21])) %>%  
+mutate(`DEPENDENCY` = (`YOUNG` + `AGED`)
+/`ECONOMY ACTIVE`) %>%
+  select(`PA`, `SZ`, `YOUNG`, 
+       `ECONOMY ACTIVE`, `AGED`, 
+       `TOTAL`, `DEPENDENCY`)
+```
+
+#### Joining Attribute Data and Geospatial Data
+
+Convert value of PA and SZ fields to upper case as SUBZONE_N and PLN_AREA_N are in upper case.
+
+```{r}
+popdata2020 <- popdata2020 %>%
+  mutate_at(.vars = vars(PA, SZ), 
+          .funs = funs(toupper)) %>%
+  filter(`ECONOMY ACTIVE` > 0)
+```
+
+Using *left_join()* to join two sets of data based on a common attribute as common identifier.
+
+```{r}
+mpsz_pop2020 <- left_join(mpsz, popdata2020,
+                          by = c("SUBZONE_N" = "SZ"))
+```
+
+```{r}
+write_rds(mpsz_pop2020, "data/rds/mpszpop2020.rds")
+```
+
+## Choropleth Mapping Geospatial Data Using tmap
+
+### Plotting a Chloropleth Map quickly by using qtm()
+
+Provide a good default visualization. Shows cartographic standard choropleth map.
+
+```{r}
+tmap_mode("plot")
+qtm(mpsz_pop2020, 
+    fill = "DEPENDENCY")
+```
+
+*tmap_mode()* with "plot" option is used to produce a static map. For interactive mode, "view" option should be used.
+
+*fill* argument is used to map the attribute (i.e. DEPENDENCY)
+
+### Creating Choropleth Map by using tmap's elements
+
+Draw high quality chloropleth map using tmap's drawing elements.
+
+```{r}
+tm_shape(mpsz_pop2020)+
+  tm_fill("DEPENDENCY", 
+          style = "quantile", 
+          palette = "Blues",
+          title = "Dependency ratio") +
+  tm_layout(main.title = "Distribution of Dependency Ratio by planning subzone",
+            main.title.position = "center",
+            main.title.size = 1.2,
+            legend.height = 0.45, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_borders(alpha = 0.5) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar() +
+  tm_grid(alpha =0.2) +
+  tm_credits("Source: Planning Sub-zone boundary from Urban Redevelopment Authorithy (URA)\n and Population data from Department of Statistics DOS", 
+             position = c("left", "bottom"))
+```
+
+#### Drawing Base Map
+
+*tm_shape()* used to define the input data and *tm_polygons()* used to draw the planning subzone polygons.
+
+```{r}
+tm_shape(mpsz_pop2020)+tm_polygons()
+```
+
+#### Drawing Chloropleth Map using *tm_polygons()*
+
+Assign the target variable such as 'Dependency' to *tm_polygons()*
+
+```{r}
+tm_shape(mpsz_pop2020)+ tm_polygons("DEPENDENCY")
+```
+
+Default binning interval - "pretty"
+
+Default color scheme - Y10rRd of ColorBrewer
+
+Missing value is shaded in grey
+
+#### Drawing Chloropleth Map using *tm_fill()* and \**tm_border()*\*\*
+
+*tm_polygons()* is a wrapper of *tm_fill()* and *tm_border().* *tm_fill()* shades the polygons by using the default color scheme and *tml_borders()* adds the borders of the shapefile onto the choropleth map
+
+Using *tm_fill()* alone will show that the polygons are shaded with no borders.
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY")
+```
+
+Add boundary to the polygons
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY") + tm_borders(lwd = 0.1, alpha = 1)
+```
+
+Alpha determine the transparency (range 0 to 1) and default value is 1.
+
+3 others arguments for *tm_borders()*:
+
+-   *col* = border colour,
+
+-   *lwd* = border line width. The default is 1, and
+
+-   *lty* = border line type. The default is "solid".
+
+### Data Classification Method of tmap
+
+**tmap** provides a total ten data classification methods, namely: *fixed*, *sd*, *equal*, *pretty* (default), *quantile*, *kmeans*, *hclust*, *bclust*, *fisher*, and *jenks*.
+
+define a data classification method, the *style* argument of *tm_fill()* or *tm_polygons()* will be used.
+
+### Plotting Choropleth Maps with built-in Classification Methods
+
+Classify using 5 classes
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY", n = 5, style = "jenks") + tm_borders(alpha = 0.5)
+```
+
+Classify using equal data classification method
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY", n = 5, style = "equal") + tm_borders(alpha = 0.5)
+```
+
+### Plotting Chloropleth Map with Custome Break
+
+Breaks are computed internally. Need to explicitly set to override using the break arguement of *tm_fill()*. Breaks include a maximum and minimum. Therefore, need to specific n+1 elements to get n elements in the break option in ascending order.
+
+Get summary statistic of the data
+
+```{r}
+summary(mpsz_pop2020$DEPENDENCY)
+```
+
+Set break point using the above as reference.
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY", breaks = c(0, 0.60, 0.70, 0.80, 0.90, 1.00)) + tm_borders(alpha = 0.5)
+```
+
+## Color Scheme
+
+Set of predefined color ramps from RColorBrewer package.
+
+#### Using ColorBrewer Palette
+
+Assign preferred color using *palette* argument of *tm_fill()*.
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY", n = 6, style = "quantile", palette = "Blues") + tm_borders(alpha = 0.5)
+```
+
+Add a '-' prefix to reverse shading.
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY", n = 6, style = "quantile", palette = "-Blues") + tm_borders(alpha = 0.5)
+```
+
+### Map Layouts
+
+Map layout refers to the combination of all map elements into a cohesive map.
+
+### Map Legend
+
+Several legend options are provided to change the placement, format and appearance of the legend in tmap.
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY", style = "jenks", palette = "Blues", legend.hist = TRUE, legend.is.portrait = TRUE, legend.hist.z = 0.1) +
+tm_layout(main.title = "Distribution of Dependency Ratio by planning subzone \n(Jenks classification)", main.title.position = "center", main.title.size = 1, legend.height = 0.45, legend.width = 0.35, legend.outside = FALSE, legend.position = c("right", "bottom"), frame = FALSE) +
+tm_borders(alpha = 0.5)
+```
+
+### Map Style
+
+Changing layout setting.
+
+Classic style
+
+```{r}
+tm_shape(mpsz_pop2020) + tm_fill("DEPENDENCY", style = "quantile", palette = "-Greens") + tm_borders(alpha = 0.5) +  tmap_style("classic")
+```
+
+### Cartographic Furniture
+
+Draw other map furniture such as compass, scale bar and grid lines.
+
+Using functions *tm_compass(), tm_scale_bar()* and *tm_grid()* are used to add compass, scale bar and grid lines onto the chloropleth map.
+
+```{r}
+tm_shape(mpsz_pop2020)+
+  tm_fill("DEPENDENCY", 
+          style = "quantile", 
+          palette = "Blues",
+          title = "No. of persons") +
+  tm_layout(main.title = "Distribution of Dependency Ratio \nby planning subzone",
+            main.title.position = "center",
+            main.title.size = 1.2,
+            legend.height = 0.45, 
+            legend.width = 0.35,
+            frame = TRUE) +
+  tm_borders(alpha = 0.5) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar(width = 0.15) +
+  tm_grid(lwd = 0.1, alpha = 0.2) +
+  tm_credits("Source: Planning Sub-zone boundary from Urban Redevelopment Authorithy (URA)\n and Population data from Department of Statistics DOS", 
+             position = c("left", "bottom"))
+```
+
+To reset to default style
+
+```{r}
+tmap_style("white")
+```
+
+### Drawing Multiple Chloropleth Maps
+
+In **tmap**, small multiple maps can be plotted in three ways:
+
+-   by assigning multiple values to at least one of the asthetic arguments,
+
+-   by defining a group-by variable in *tm_facets()*, and
+
+-   by creating multiple stand-alone maps with *tmap_arrange()*.
+
+### By Assigning Multiple Values to At Least One of the Aesthetic Arguments
+
+Defining *ncols* in *tm_fill()*
+
+```{r}
+tm_shape(mpsz_pop2020)+
+  tm_fill(c("YOUNG", "AGED"),
+          style = "equal", 
+          palette = "Blues") +
+  tm_layout(legend.position = c("right", "bottom")) +
+  tm_borders(alpha = 0.5) +
+  tmap_style("white")
+```
+
+Assigning multiple values to at least one of the aesthetic arguments
+
+```{r}
+tm_shape(mpsz_pop2020)+ 
+  tm_polygons(c("DEPENDENCY","AGED"),
+          style = c("equal", "quantile"), 
+          palette = list("Blues","Greens")) +
+  tm_layout(legend.position = c("right", "bottom"))
+```
+
+### By defining a Group-By Variable in *tm_facets()*
+
+```{r}
+tm_shape(mpsz_pop2020) +
+  tm_fill("DEPENDENCY",
+          style = "quantile",
+          palette = "Blues",
+          thres.poly = 0) + 
+  tm_facets(by="REGION_N", 
+            free.coords=TRUE, 
+            drop.shapes=TRUE) +
+  tm_layout(legend.show = FALSE,
+            title.position = c("center", "center"), 
+            title.size = 20) +
+  tm_borders(alpha = 0.5)
+```
+
+### By Creating Multiple Standalone Maps with *tmap_arrange()*
+
+```{r}
+youngmap <- tm_shape(mpsz_pop2020)+ 
+  tm_polygons("YOUNG", 
+              style = "quantile", 
+              palette = "Blues")
+
+agedmap <- tm_shape(mpsz_pop2020)+ 
+  tm_polygons("AGED", 
+              style = "quantile", 
+              palette = "Blues")
+
+tmap_arrange(youngmap, agedmap, asp=1, ncol=2)
+```
+
+## Mapping Spatial Object Meeting a Selection Criterion
+
+```{r}
+tm_shape(mpsz_pop2020[mpsz_pop2020$REGION_N=="CENTRAL REGION", ])+
+  tm_fill("DEPENDENCY", 
+          style = "quantile", 
+          palette = "Blues", 
+          legend.hist = TRUE, 
+          legend.is.portrait = TRUE,
+          legend.hist.z = 0.1) +
+  tm_layout(legend.outside = TRUE,
+            legend.height = 0.45, 
+            legend.width = 5.0,
+            legend.position = c("right", "bottom"),
+            frame = FALSE) +
+  tm_borders(alpha = 0.5)
+```
