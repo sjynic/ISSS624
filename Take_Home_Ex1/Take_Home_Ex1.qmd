@@ -9,6 +9,8 @@ This is take home exercise 1
 
 ## Getting Started
 
+This code chunk will load the package sf, tidyverse, tmap, spdep and funModeling. If the package is not installed, it will do the installation before loading the package.
+
 ```{r}
 pacman::p_load(sf, tidyverse, tmap, spdep, funModeling)
 ```
@@ -17,7 +19,15 @@ pacman::p_load(sf, tidyverse, tmap, spdep, funModeling)
 
 ### Importing Water Point Geospatial Data into R
 
+Importing the data as simple feature into R
+
 #### Recoding NA into string and reducing file size for upload to Git
+
+This code chunk is reading the data from the shapefile downloaded from waterpointdata.org and filtering the rows of interest (information belonging to nigeria).
+
+It also helps to pick out the columns that are useful so that the rds file created will be smaller.
+
+The filtered data will then be written into a rds file that will be read for analysis. In this way, these steps can be omitted in the future runs as the data can be obtained from the rds file created.
 
 ```{r}
 #| eval: false
@@ -30,17 +40,25 @@ wp_nga <- write_rds(wp_1, "geodata/wp_nga.rds")
 
 ### Importing Nigeria Boundaries Geospatial Data into R
 
+This code chunk will import the Nigeria geographical boundaries from the shapefile downloaded from geoboundaries.org. This will be used for counting points in each polygon.
+
 ```{r}
 nga <- st_read(dsn = "data", layer = "geoBoundaries-NGA-ADM2")
 ```
 
 ## Data Wrangling
 
+Before analysis, it is important to prepare the data and visualize the data. Clean up data will be easier to work with and prevent any error. It will also give more accurate results.
+
+This code chunk will read the data from the rds file created previously.
+
 ```{r}
 wp_nga <- read_rds("geodata/wp_nga.rds")
 ```
 
 ### Visualizing the column of interest
+
+This code chunk helps to visualize the different values present in the column 'status_cle' and the frequency of each value. This can help us to classify the values into various categories for analysis.
 
 ```{r}
 freq(data = wp_nga, input = 'status_cle')
@@ -49,6 +67,8 @@ freq(data = wp_nga, input = 'status_cle')
 The status can be divided into 3 broad categories, 'Functional' (includes 'Functional but needs repair', 'Functional but not in sure' and 'Functional'), 'Non-Functional' (includes 'Non-Functional', 'Non-Functional due to dry season', 'Non functional due to dry season', 'Abandoned' and 'Abandoned/Decommissioned') and lastly 'Unknown'.
 
 #### First category 'Funtional' waterpoint
+
+This code chunk will filter out rows that belong to functional waterpoints using the values identified from the 'status_cle' column.
 
 ```{r}
 wpt_functional <- wp_nga %>%
@@ -61,6 +81,8 @@ freq(data = wpt_functional, input = "status_cle")
 
 #### Second category 'Non-Functional' waterpoint
 
+This code chunk will filter out rows that belong to non functional waterpoints using the values identified from the 'status_cle' column.
+
 ```{r}
 wpt_nonfunctional <- wp_nga %>%
   filter(status_cle %in% c("Abandoned/Decommissioned", "Abandoned", "Non-Functional", "Non functional due to dry season", "Non-Functional due to dry season"))
@@ -72,6 +94,8 @@ freq(data=wpt_nonfunctional, input = 'status_cle')
 
 #### Third catergory 'Unknown' waterpoint
 
+This code chunk will filter out rows that belong to unknown waterpoints using the values identified from the 'status_cle' column.
+
 ```{r}
 wpt_unknown <- wp_nga %>% filter(status_cle == "Unknown")
 ```
@@ -82,15 +106,21 @@ freq(data=wpt_unknown, input = 'status_cle')
 
 ### Number of waterpoints in each polygons
 
+This code chunk will count the number of waterpoints belong to each category in each polygon. It will count the number of points in each category that intersect with each boundary from the geoboundaries simple feature data frame.
+
 ```{r}
 nga_wp <- nga %>% mutate(`total wpt` = lengths(st_intersects(nga, wp_nga))) %>% mutate(`wpt functional` = lengths(st_intersects(nga, wpt_functional))) %>% mutate(`wpt non-functional` = lengths(st_intersects(nga, wpt_nonfunctional))) %>% mutate(`wpt unknown` = lengths(st_intersects(nga, wpt_unknown)))
 ```
 
 ### Saving the analytical data table
 
+This code chunk will create two more columns as calculation of the percentage of the functional and non functional waterpoints against the total waterpoints present.
+
 ```{r}
 nga_wp <- nga_wp %>% mutate(pct_functional = `wpt functional`/`total wpt`) %>% mutate(`pct_non-functional` = `wpt non-functional`/`total wpt`)
 ```
+
+This code chunk will update the existing data file with the new columns.
 
 ```{r}
 #| eval: false
@@ -98,6 +128,8 @@ write_rds(nga_wp, "geodata/nga_wp.rds")
 ```
 
 ## Visualizing the spatial distribution of waterpoints
+
+This code chunk draw a choropleth map for each category including the total waterpoints. Then the maps are arranged side by side for better comparison.
 
 ```{r}
 #| fig-width: 14
@@ -113,41 +145,71 @@ tmap_arrange(total, wp_functional, wp_nonfunctional, unknown, asp=1, ncol=2)
 
 ## Computing Contiguity Spatial Weight
 
-### Adaptive Distance Weight Matrix
+### Visualizing Contiguity Weights
+
+To visualize the contiguity weights, we need to draw a connectivity graph and the most typical method is using the polygon centroids. Therefore, we will need to get the coordinate of each centroid.
+
+The code chunk below will get the longitude of each centroid.
 
 ```{r}
 longitude <- map_dbl(nga_wp$geometry, ~st_centroid(.x)[[1]])
 ```
 
+This code chunk below will get the latitude of each centroid
+
 ```{r}
 latitude <- map_dbl(nga_wp$geometry, ~st_centroid(.x)[[2]])
 ```
+
+This code chunk below will map each longitude to the latitude giving the coordinate of each centroid
 
 ```{r}
 coords <- cbind(longitude, latitude)
 ```
 
+This code chunk will list the centroids with their respective coodinates.
+
 ```{r}
 head(coords)
 ```
+
+### Adaptive Distance Weight Matrix
+
+The neighbors need to be assigned weights and an equal weight style is used.
+
+To resolve the problem of fixed distance weight matrix, a adaptive distance weight matrix can be used to control the number of neighbors using k-nearest neighbors.
+
+This code chunk uses the coordinates of the centroids that were calculated and together with the number of neighbors set, a adaptive distance weight matrix can be computed using the k-nearest neighbor function.
 
 ```{r}
 knn8 <- knn2nb(knearneigh(coords, k=8))
 knn8
 ```
 
+This code chunk will list out the polygons and their respective neighbors.
+
 ```{r}
 str(knn8)
 ```
+
+This code chunk will plot the connectivity graph of the weight matrix that we computed.
 
 ```{r}
 plot(nga_wp$geometry, border="lightgrey")
 plot(knn8, coords, pch = 19, cex = 0.6, add = TRUE, col = "red")
 ```
 
+This code chunk convert the weight matrix into a nb2 list object so that it can be used for the global Moran's I test.
+
 ```{r}
-rswm_ad <- nb2listw(knn8, style="W", zero.policy = TRUE)
+  rswm_ad <- nb2listw(knn8, style="W", zero.policy = TRUE)
 ```
+
+## Analysis on functional waterpoints
+
+## Checking if cluster(s) present for functional waterpoints
+
+This code chunk does the global Moran's I test on the percentage of functional waterpoint in each polygon against the total number of waterpoints. The result of the test will indicate if there are clusters of waterpoints or the waterpoints' location are truly random.
 
 ```{r}
 moran.test(nga_wp$`pct_functional`, 
@@ -156,36 +218,400 @@ moran.test(nga_wp$`pct_functional`,
            na.action=na.omit)
 ```
 
+The Moran 's I index of 0.538 is positive, which indicate that there are spatial clusters and the result is significant as show by the p-value of less than 0.025 (2 tiers test with 95% confidence interval) indicating that the waterpoints are not arranged in random. Null hypothesis stating that the waterpoints arrangement are random is rejected.
+
 ```{r}
 set.seed(1234)
-bperm_ad= moran.mc(nga_wp$`pct_functional`, 
+bperm_ad_functional = moran.mc(nga_wp$`pct_functional`, 
             listw=rswm_ad, 
             nsim=999, 
             zero.policy = TRUE, 
             na.action=na.omit)
-bperm_ad
+bperm_ad_functional
 ```
+
+Monte Carlo simulation was done 1000 times to get the average Moran's Index. The result shows that the initial Moran's I test result is consistent with the results from the simulation.
+
+## Locating the clusters of functional waterpoints
+
+After doing the global Moran's I test to check if clusters are present in the data. Local Moran's I test can be done to check the location of the clusters and at the same time determine if they are truly a cluster or outlier.
+
+This code chunk convert the NA in the 'pct_functional' and 'pct_non-functional' columns to 0 so that it can be added to the local Moran's I test.
 
 ```{r}
 nga_wp <- nga_wp %>% mutate(pct_functional = replace_na(pct_functional, 0)) %>% mutate(`pct_non-functional` = replace_na(`pct_non-functional`, 0))
 ```
 
-```{r}
-fips_wp <- order(nga_wp$shapeName)
-localMI_wp <- localmoran(nga_wp$`pct_functional`, rswm_ad)
-head(localMI_wp)
-```
+This code chunk does the local Moran's I test based on the percentage of functional waterpoints.
 
 ```{r}
-nga.localMI <- cbind(nga_wp,localMI_wp) %>%
+fips_wp <- order(nga_wp$shapeName)
+localMI_wp_functional <- localmoran(nga_wp$`pct_functional`, rswm_ad)
+head(localMI_wp_functional)
+```
+
+This code chunk map the local Moran's I test results to their respective polygons so that it can be plotted out for visualization to do better analysis.
+
+```{r}
+nga.localMI_functional <- cbind(nga_wp,localMI_wp_functional) %>%
   rename(Pr.Ii = Pr.z....E.Ii..)
 ```
 
+This code chunk will draw out the map using the tmap functions
+
 ```{r}
-tm_shape(nga.localMI) +
+tm_shape(nga.localMI_functional) +
   tm_fill(col = "Ii", 
           style = "pretty",
           palette = "RdBu",
           title = "local moran statistics") +
   tm_borders(alpha = 0.5)
+```
+
+This results show that the clusters are present at the north and north east part of the country indicated by the dark blue polygons.
+
+The dark red polygon at the south part of the map is an outlier with very negative local Moran's I index
+
+This code chunk map the local Moran's I test results to their respective polygons so that it can be plotted out for visualization to do better analysis.
+
+```{r}
+tm_shape(nga.localMI_functional) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+```
+
+The dark blue areas shows those local Moran'I index are significant as they represent value less than the significant level of less than 0.025.
+
+The code chunk will draw the map of the local Moran's I index side by side the map of the local Moran's I p-values.
+
+```{r}
+ngalocalMI_functional.map <- tm_shape(nga.localMI_functional) +
+  tm_fill(col = "Ii", 
+          style = "pretty", 
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+
+ngapvalue_functional.map <- tm_shape(nga.localMI_functional) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+
+tmap_arrange(ngalocalMI_functional.map, ngapvalue_functional.map, asp=1, ncol=2)
+```
+
+As shown in both map, both the clusters (colored in dark green on the left) and outlier (colored in orange on the left) are significant which indicate that they are not random.
+
+## Preparing LISA cluster map for functional waterpoints
+
+The code chunks below show the steps to prepare a LISA cluster map.
+
+```{r}
+quadrant <- vector(mode="numeric",length=nrow(nga.localMI_functional))
+```
+
+Next, derives the spatially lagged variable of interest (i.e. pct_functional) and centers the spatially lagged variable around its mean
+
+```{r}
+nga_wp$lag_functional <- lag.listw(rswm_ad, nga_wp$`pct_functional`)
+nga_DV_functional <- nga_wp$lag_functional - mean(nga_wp$lag_functional) 
+```
+
+This is follow by centering the local Moran\'s around the mean.
+
+```{r}
+nga_LM_I_functional <- localMI_wp_functional[,1] - mean(localMI_wp_functional[,1])
+```
+
+Next, we will set a statistical significance level for the local Moran.
+
+```{r}
+signif <- 0.05
+```
+
+These four command lines define the low-low (1), low-high (2), high-low (3) and high-high (4) categories.
+
+```{r}
+quadrant[nga_DV_functional <0 & nga_LM_I_functional>0] <- 1
+quadrant[nga_DV_functional >0 & nga_LM_I_functional<0] <- 2
+quadrant[nga_DV_functional <0 & nga_LM_I_functional<0] <- 3  
+quadrant[nga_DV_functional >0 & nga_LM_I_functional>0] <- 4 
+```
+
+Lastly, places non-significant Moran in the category 0.
+
+```{r}
+quadrant[localMI_wp_functional[,5]>signif] <- 0
+```
+
+## Plotting LISA map for functional waterpoints
+
+```{r}
+nga.localMI_functional$quadrant <- quadrant
+colors <- c("#ffffff", "#2c7bb6", "#abd9e9", "#fdae61", "#d7191c")
+clusters <- c("insignificant", "low-low", "low-high", "high-low", "high-high")
+
+nga_LISAMap_functional <- tm_shape(nga.localMI_functional) +
+  tm_fill(col = "quadrant", 
+          style = "cat", 
+          palette = colors[c(sort(unique(quadrant)))+1], 
+          labels = clusters[c(sort(unique(quadrant)))+1],
+          popup.vars = c("")) +
+  tm_view(set.zoom.limits = c(11,17)) +
+  tm_borders(alpha=0.5)
+
+nga_LISAMap_functional
+```
+
+The LISA map shows that the cluster in the north are low-low cluster and the outlier at the south is a low-high outlier.
+
+```{r}
+tmap_arrange(wp_functional, nga_LISAMap_functional, asp=1, ncol=2)
+```
+
+```{r}
+tmap_arrange(ngalocalMI_functional.map, ngapvalue_functional.map, asp=1, ncol=2)
+```
+
+## Hot Spot and Cold Spot Area Analysis
+
+### Getis and Ord\'s G-Statistics
+
+An alternative spatial statistics to detect spatial anomalies is the Getis and Ord\'s G-statistics (Getis and Ord, 1972; Ord and Getis, 1995). It looks at neighbours within a defined proximity to identify where either high or low values clutser spatially. Here, statistically significant hot-spots are recognised as areas of high values where other areas within a neighbourhood range also share high values too.
+
+### Convert the weight matrix into spatial weight object
+
+This code chunk will convert the weight matrix into a spatial weight object using the *nb2listw()*
+
+```{r}
+knn_lw <- nb2listw(knn8, style="B")
+summary(knn_lw)
+```
+
+### Computing the Gi Statistics
+
+This code chunk will compute the Gi values for the proportion of functional waterpoints using the adaptive weight matrix
+
+```{r}
+fips <- order(nga_wp$shapeName)
+gi.adaptive_functional <- localG(nga_wp$`pct_functional`, knn_lw)
+nga_functional.gi <- cbind(nga_wp, as.matrix(gi.adaptive_functional)) %>%
+  rename(gstat_adaptive = as.matrix.gi.adaptive_functional.)
+```
+
+This code chunk will map the Gi values using adaptive weight matrix
+
+```{r}
+Gimap_functional <- tm_shape(nga_functional.gi) + 
+  tm_fill(col = "gstat_adaptive", 
+          style = "pretty", 
+          palette="-RdBu", 
+          title = "local Gi") + 
+  tm_borders(alpha = 0.5)
+
+tmap_arrange(wp_functional, 
+             Gimap_functional,
+             asp=1, 
+             ncol=2)
+```
+
+## Analysis on non functional waterpoints
+
+## Checking if cluster(s) present for functional waterpoints
+
+This code chunk does the global Moran's I test on the percentage of non functional waterpoint in each polygon against the total number of waterpoints. The result of the test will indicate if there are clusters of waterpoints or the waterpoints' location are truly random.
+
+```{r}
+moran.test(nga_wp$`pct_non-functional`, 
+           listw=rswm_ad, 
+           zero.policy = TRUE, 
+           na.action=na.omit)
+```
+
+The Moran 's I index of 0.461 is positive, which indicate that there are spatial clusters and the result is significant as show by the p-value of less than 0.025 (2 tiers test with 95% confidence interval) indicating that the waterpoints are not arranged in random. Null hypothesis stating that the waterpoints arrangement are random is rejected.
+
+```{r}
+set.seed(1234)
+bperm_ad_nonfunctional = moran.mc(nga_wp$`pct_non-functional`, 
+            listw=rswm_ad, 
+            nsim=999, 
+            zero.policy = TRUE, 
+            na.action=na.omit)
+bperm_ad_nonfunctional
+```
+
+Monte Carlo simulation was done 1000 times to get the average Moran's Index. The result shows that the initial Moran's I test result is consistent with the results from the simulation.
+
+## Locating the clusters of functional waterpoints
+
+After doing the global Moran's I test to check if clusters are present in the data. Local Moran's I test can be done to check the location of the clusters and at the same time determine if they are truly a cluster or outlier.
+
+```{r}
+fips_wp <- order(nga_wp$shapeName)
+localMI_wp_nonfunctional <- localmoran(nga_wp$`pct_non-functional`, rswm_ad)
+head(localMI_wp_nonfunctional)
+```
+
+This code chunk map the local Moran's I test results to their respective polygons so that it can be plotted out for visualization to do better analysis.
+
+```{r}
+nga.localMI_nonfunctional <- cbind(nga_wp,localMI_wp_nonfunctional) %>%
+  rename(Pr.Ii = Pr.z....E.Ii..)
+```
+
+This code chunk will draw out the map using the tmap functions
+
+```{r}
+tm_shape(nga.localMI_nonfunctional) +
+  tm_fill(col = "Ii", 
+          style = "pretty",
+          palette = "RdBu",
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+```
+
+This results show that the clusters are present at the north and north east part of the country indicated by the dark blue polygons.
+
+The dark red polygon at the south part of the map is an outlier with very negative local Moran's I index.
+
+This code chunk will map the local Moran's I p-values to each polygon and draw the map out using the tmap functions.
+
+```{r}
+tm_shape(nga.localMI_nonfunctional) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+```
+
+The dark blue areas shows those local Moran'I index are significant as they represent value less than the significant level of less than 0.025.
+
+The code chunk will draw the map of the local Moran's I index side by side the map of the local Moran's I p-values.
+
+```{r}
+ngalocalMI_nonfunctional.map <- tm_shape(nga.localMI_nonfunctional) +
+  tm_fill(col = "Ii", 
+          style = "pretty", 
+          title = "local moran statistics") +
+  tm_borders(alpha = 0.5)
+
+ngapvalue_nonfunctional.map <- tm_shape(nga.localMI_nonfunctional) +
+  tm_fill(col = "Pr.Ii", 
+          breaks=c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf),
+          palette="-Blues", 
+          title = "local Moran's I p-values") +
+  tm_borders(alpha = 0.5)
+
+tmap_arrange(ngalocalMI_nonfunctional.map, ngapvalue_nonfunctional.map, asp=1, ncol=2)
+```
+
+As shown in both map, the cluster (colored in dark green on the left) and outlier (colored in orange on the left) are significant which indicate that they are not random.
+
+## Preparing LISA cluster map for non functional waterpoints
+
+The code chunks below show the steps to prepare a LISA cluster map.
+
+```{r}
+quadrant <- vector(mode="numeric",length=nrow(nga.localMI_nonfunctional))
+```
+
+Next, derives the spatially lagged variable of interest (i.e. pct_functional) and centers the spatially lagged variable around its mean
+
+```{r}
+nga_wp$lag_nonfunctional <- lag.listw(rswm_ad, nga_wp$`pct_non-functional`)
+nga_DV_nonfunctional <- nga_wp$lag_nonfunctional - mean(nga_wp$lag_nonfunctional) 
+```
+
+This is follow by centering the local Moran\'s around the mean.
+
+```{r}
+nga_LM_I_nonfunctional <- localMI_wp_nonfunctional[,1] - mean(localMI_wp_nonfunctional[,1])
+```
+
+Next, we will set a statistical significance level for the local Moran.
+
+```{r}
+signif <- 0.05
+```
+
+These four command lines define the low-low (1), low-high (2), high-low (3) and high-high (4) categories.
+
+```{r}
+quadrant[nga_DV_nonfunctional <0 & nga_LM_I_nonfunctional>0] <- 1
+quadrant[nga_DV_nonfunctional >0 & nga_LM_I_nonfunctional<0] <- 2
+quadrant[nga_DV_nonfunctional <0 & nga_LM_I_nonfunctional<0] <- 3  
+quadrant[nga_DV_nonfunctional >0 & nga_LM_I_nonfunctional>0] <- 4 
+```
+
+Lastly, places non-significant Moran in the category 0.
+
+```{r}
+quadrant[localMI_wp_nonfunctional[,5]>signif] <- 0
+```
+
+## Plotting LISA map for non functional waterpoints
+
+```{r}
+nga.localMI_nonfunctional$quadrant <- quadrant
+colors <- c("#ffffff", "#2c7bb6", "#abd9e9", "#fdae61", "#d7191c")
+clusters <- c("insignificant", "low-low", "low-high", "high-low", "high-high")
+
+nga_LISAMap_nonfunctional <- tm_shape(nga.localMI_nonfunctional) +
+  tm_fill(col = "quadrant", 
+          style = "cat", 
+          palette = colors[c(sort(unique(quadrant)))+1], 
+          labels = clusters[c(sort(unique(quadrant)))+1],
+          popup.vars = c("")) +
+  tm_view(set.zoom.limits = c(11,17)) +
+  tm_borders(alpha=0.5)
+
+nga_LISAMap_nonfunctional
+```
+
+The LISA map shows that the cluster in the north are low-low cluster and the outlier at the south is a low-high outlier.
+
+```{r}
+tmap_arrange(wp_nonfunctional, nga_LISAMap_nonfunctional, asp=1, ncol=2)
+```
+
+```{r}
+tmap_arrange(ngalocalMI_nonfunctional.map, ngapvalue_nonfunctional.map, asp=1, ncol=2)
+```
+
+## Hot Spot and Cold Spot Area Analysis
+
+### Getis and Ord\'s G-Statistics
+
+An alternative spatial statistics to detect spatial anomalies is the Getis and Ord\'s G-statistics (Getis and Ord, 1972; Ord and Getis, 1995). It looks at neighbours within a defined proximity to identify where either high or low values clutser spatially. Here, statistically significant hot-spots are recognised as areas of high values where other areas within a neighbourhood range also share high values too.
+
+### Computing the Gi Statistics
+
+This code chunk will compute the Gi values for the proportion of non functional waterpoints using the adaptive weight matrix
+
+```{r}
+fips <- order(nga_wp$shapeName)
+gi.adaptive_nonfunctional <- localG(nga_wp$`pct_non-functional`, knn_lw)
+nga_nonfunctional.gi <- cbind(nga_wp, as.matrix(gi.adaptive_nonfunctional)) %>%
+  rename(gstat_adaptive = as.matrix.gi.adaptive_nonfunctional.)
+```
+
+This code chunk will map the Gi values using adaptive weight matrix
+
+```{r}
+Gimap_nonfunctional <- tm_shape(nga_nonfunctional.gi) + 
+  tm_fill(col = "gstat_adaptive", 
+          style = "pretty", 
+          palette="-RdBu", 
+          title = "local Gi") + 
+  tm_borders(alpha = 0.5)
+
+tmap_arrange(wp_nonfunctional, 
+             Gimap_nonfunctional,
+             asp=1, 
+             ncol=2)
 ```
