@@ -1,0 +1,28 @@
+---
+title: "Take Home Exercise 2"
+editor: visual
+---
+
+## Overview
+
+This is take home exercise 2
+
+## Getting Started
+
+This code chunk will load the package sf, tidyverse, tmap, spdep and funModeling. If the package is not installed, it will do the installation before loading the package.
+
+```{r}
+pacman::p_load(sf, tidyverse, tmap, spdep, funModeling)
+```
+
+## Importing Geospatial Data
+
+### Importing Water Point Geospatial Data into R
+
+This code chunk will read the data from the rds file created previously in Take Home Exercise 1.
+
+```{r}
+wp_nga <- read_rds("geodata/wp_nga.rds")
+```
+
+## Data Wrangling

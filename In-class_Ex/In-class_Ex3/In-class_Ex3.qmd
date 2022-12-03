@@ -1,0 +1,337 @@
+---
+title: "In-class Exercise 3"
+editor: visual
+execute:
+  warning: false
+  message: false
+---
+
+## Overview
+
+This is in-class exercise 3
+
+## Getting Started
+
+### Installing and loading R packages
+
+The code chunks below installs and launches these R packages into R environment.
+
+```{r}
+pacman::p_load(rgdal, spdep, tmap, sf, ggpubr, cluster, factoextra, NbClust, heatmaply, corrplot, psych, tidyverse, ClustGeo)
+```
+
+factoextra is for factors analysis.
+
+NbCluster provides different ways to access the clustering results.
+
+## Data Import and Preparation
+
+The Myanmar Township Boundary GIS data is in ESRI shapefile format. It will be imported into R environment by using the *st_read()* function of **sf**.
+
+The code chunks used are shown below:
+
+```{r}
+shan_sf <- st_read(dsn = "data/geospatial", 
+                   layer = "myanmar_township_boundaries") %>%
+  filter(ST %in% c("Shan (East)", "Shan (North)", "Shan (South)"))
+```
+
+```{r}
+shan_sf
+```
+
+```{r}
+glimpse(shan_sf)
+```
+
+### Importing aspatial data into R environment
+
+```{r}
+ict <- read_csv ("data/aspatial/Shan-ICT.csv")
+```
+
+### Derive new variables using **dplyr** package
+
+```{r}
+ict_derived <- ict %>%
+  mutate(`RADIO_PR` = `Radio`/`Total households`*1000) %>%
+  mutate(`TV_PR` = `Television`/`Total households`*1000) %>%
+  mutate(`LLPHONE_PR` = `Land line phone`/`Total households`*1000) %>%
+  mutate(`MPHONE_PR` = `Mobile phone`/`Total households`*1000) %>%
+  mutate(`COMPUTER_PR` = `Computer`/`Total households`*1000) %>%
+  mutate(`INTERNET_PR` = `Internet at home`/`Total households`*1000) %>%
+  rename(`DT_PCODE` =`District Pcode`,`DT`=`District Name`,
+         `TS_PCODE`=`Township Pcode`, `TS`=`Township Name`,
+         `TT_HOUSEHOLDS`=`Total households`,
+         `RADIO`=`Radio`, `TV`=`Television`, 
+         `LLPHONE`=`Land line phone`, `MPHONE`=`Mobile phone`,
+         `COMPUTER`=`Computer`, `INTERNET`=`Internet at home`) 
+```
+
+Divide by 1000 as most literature states by per 1000 household. Can do in percentage too by multiply by 100.
+
+Change variable names.
+
+### EDA using choropleth map
+
+#### Joining geospatial data with aspatial data
+
+```{r}
+shan_sf <- left_join(shan_sf, ict_derived, by=c("TS_PCODE"="TS_PCODE"))
+```
+
+Simple feature data frame on the left and the attribute table on the right. To retain the spatial data, use the simple feature file for the join and keep it on the left so that I keep the geometric property.
+
+## Exploratory Data Analysis (EDA)
+
+### EDA using statistical graphics
+
+```{r}
+ggplot(data=ict_derived, aes(x=`RADIO`)) + geom_histogram(bins=20, color="black", fill="light blue")
+```
+
+If it is not assigned, it will not save as an object. To use it again later in the script, assigned it to a variable name so that it will become an output object (shown in the environment).
+
+## Correlation Analysis
+
+```{r}
+cluster_vars.cor = cor(ict_derived[,12:17])
+corrplot.mixed(cluster_vars.cor, lower = "ellipse", upper = "number", tl.pos = "lt", diag = "l", tl.col = "black")
+```
+
+Picking up only column 12 to 17 using this notion \[,12:17\] and function cor is converting the data table to a correlation matrix.
+
+## Hierarchy Cluster Analysis
+
+### Extrating clustering variables
+
+```{r}
+cluster_vars <- shan_sf %>%
+  st_set_geometry(NULL) %>%
+  select("TS.x", "RADIO_PR", "TV_PR", "LLPHONE_PR", "MPHONE_PR", "COMPUTER_PR")
+head(cluster_vars,10)
+```
+
+As the first few columns belong to the simple features, use select() to select the features to do the hierarchical clustering.
+
+Setting the geometry into null so that the hierarchical clustering can work. As the geometry is hidden and glued to the data frame, need to exclude them by setting it to null.
+
+```{r}
+row.names(cluster_vars) <- cluster_vars$"TS.x"
+head(cluster_vars,10)
+```
+
+Copied the column to become the object id.
+
+```{r}
+shan_ict <- select(cluster_vars, c(2:6))
+head(shan_ict, 10)
+```
+
+Prepare the data so that the data object can be used.
+
+Do not add in additional variable so that the hierarchical clustering can work. Only include those clustering variables.
+
+Add in the object id so when the dendrogram is run, it will have the object id as the name of the initial cluster.
+
+### Computing proximity matrix
+
+```{r}
+proxmat <- dist(shan_ict, method = 'euclidean')
+```
+
+Using dist() to calculate the proximity matrix using 6 different distance calculation.
+
+Results are in list form and not data frame.
+
+Proximity matrix is a n by n matrix and the distance is calculated based on the 5 variables. Similarity/dissimilarity matrix as it can be interpret both ways.
+
+### Computing hierarchical clustering
+
+Using hclust() from the base R.
+
+```{r}
+hclust_ward <- hclust(proxmat, method = 'ward.D')
+```
+
+hclust() is a base stats funtion. Only need two inputs, the proximity matrix and the method.
+
+hclust() will return a list.
+
+```{r}
+plot(hclust_ward, cex = 0.6)
+```
+
+cex parameter allow scaling and it allow scaling down of the hierarchical clustering so that the town names can be seen. cex 0.6 scale down the resolution to 60%.
+
+### Selecting the optimal clustering algorithm
+
+```{r}
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+ac <- function(x) {
+  agnes(shan_ict, method = x)$ac
+}
+
+map_dbl(m, ac)
+```
+
+Select the one with the highest coefficient as it shows the strongest clustering structure.
+
+function(x) runs the loop by passing the list as a parameter to the function.
+
+Clustering strength determine based on the homogeneity.
+
+map_dbl will map the variable to the result of the variable subjected into the function and shows the maps.
+
+#### Gap Statistic Method
+
+```{r}
+set.seed(12345)
+gap_stat <- clusGap(shan_ict, FUN = hcut, nstart = 25, K.max = 10, B = 50)
+# Print the result
+print(gap_stat, method = "firstmax")
+```
+
+```{r}
+fviz_gap_stat(gap_stat)
+```
+
+Based on the result 2 clusters is the best. However, 2 is not ideal for analysis. Therefore, based on local optimum, 5 or 6 will be the next best number of clusters. 6 is slightly better than 5 so 6 should be chosen.
+
+```{r}
+plot(hclust_ward, cex = 0.6)
+rect.hclust(hclust_ward,  k = 6, border = 2:5)
+```
+
+### Mapping the clusters formed
+
+```{r}
+groups <- as.factor(cutree(hclust_ward, k=6))
+```
+
+Group them using cutree. Output is called groups which is a list object. There are 6 levels as there is 6 clusters.
+
+```{r}
+shan_sf_cluster <- cbind(shan_sf, as.matrix(groups)) %>% rename(`CLUSTER`=`as.matrix.groups.`)
+```
+
+Convert the groups into a matrix first then join it to the simple feature data frame. When converting the group into matrix, the field name is weird. So rename it to another name that can be easier to interpret.
+
+```{r}
+qtm(shan_sf_cluster, "CLUSTER")
+```
+
+It does not form homogeneity.
+
+## Spatially Constrained Clustering - SKATER approach
+
+Taking contiguity into consideration for the clustering and not just based on the attributes.
+
+SKATER only take spatial object and do not take simple feature data frame. Need to convert the simple data frame into a spatial data frame.
+
+```{r}
+shan_sp <- as_Spatial(shan_sf)
+```
+
+Multiple data tables into a spatial data frame. Simple feature data frame is also in to spatial data frame less the geometry column.
+
+### Computing Neighbour List
+
+```{r}
+shan.nb <- poly2nb(shan_sp)
+summary(shan.nb)
+```
+
+### Computing minimum spanning tree
+
+#### Calculating edge costs
+
+```{r}
+lcosts <- nbcosts(shan.nb, shan_ict)
+```
+
+Similarity/assimilarity is treat as a cost in SKATER. Cost of traveling across the edges.
+
+Conver the cost into a weight matrix
+
+```{r}
+shan.w <- nb2listw(shan.nb, lcosts, style="B")
+summary(shan.w)
+```
+
+### Computing minimum spanning tree
+
+```{r}
+shan.mst <- mstree(shan.w)
+```
+
+```{r}
+plot(shan_sp, border=gray(.5))
+plot.mst(shan.mst, coordinates(shan_sp), col="blue", cex.lab=0.7, cex.circles=0.005, add=TRUE)
+```
+
+### Computing spatially constrained clusters using SKATER method
+
+```{r}
+clust6 <- skater(edges = shan.mst[,1:2], data = shan_ict, method = "euclidean", ncuts = 5)
+```
+
+```{r}
+ccs6 <- clust6$groups
+ccs6
+```
+
+```{r}
+plot(shan_sp, border=gray(.5))
+plot(clust6, coordinates(shan_sp), cex.lab=.7, groups.colors=c("red","green","blue", "brown", "pink"), cex.circles=0.005, add=TRUE)
+```
+
+### Visualising the clusters in choropleth map
+
+```{r}
+groups_mat <- as.matrix(clust6$groups)
+shan_sf_spatialcluster <- cbind(shan_sf_cluster, as.factor(groups_mat)) %>% rename(`SP_CLUSTER`=`as.factor.groups_mat.`)
+qtm(shan_sf_spatialcluster, "SP_CLUSTER")
+```
+
+cbind append the left table to the right table. Should not do any sorting.
+
+```{r}
+hclust.map <- qtm(shan_sf_cluster, "CLUSTER") + tm_borders(alpha = 0.5) 
+
+shclust.map <- qtm(shan_sf_spatialcluster, "SP_CLUSTER") + tm_borders(alpha = 0.5) 
+
+tmap_arrange(hclust.map, shclust.map, asp=NA, ncol=2)
+```
+
+### Spatially Constrained Hierarchical Clustering
+
+```{r}
+dist <- st_distance(shan_sf, shan_sf)
+distmat <- as.dist(dist)
+```
+
+```{r}
+cr <- choicealpha(proxmat, distmat, range.alpha = seq(0, 1, 0.1), K=6, graph = TRUE)
+```
+
+D0 is the spatial data frame and D1 is the attributes data frame. At 0.4=3 alpha, only lose approximately 20% of the spatial homogeneity and gain 80% of the attributes homogeneity.
+
+```{r}
+clustG <- hclustgeo(proxmat, distmat, alpha = 0.3)
+```
+
+```{r}
+groups <- as.factor(cutree(clustG, k=6))
+```
+
+```{r}
+shan_sf_Gcluster <- cbind(shan_sf, as.matrix(groups)) %>%
+  rename(`CLUSTER` = `as.matrix.groups.`)
+```
+
+```{r}
+qtm(shan_sf_Gcluster, "CLUSTER")
+```
