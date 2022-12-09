@@ -213,6 +213,7 @@ tmap_mode("view")
 Next, the code chunks below is used to create an interactive point symbol map.
 
 ```{r}
+tm_shape(mpsz_svy21) + tmap_options(check.and.fix = TRUE) + tm_polygons(alpha = 0.1) +
 tm_shape(condo_resale.sf) +  
   tm_dots(col = "SELLING_PRICE",
           alpha = 0.6,
