@@ -12,10 +12,31 @@ This is take home exercise 2
 This code chunk will load the package sf, tidyverse, tmap, spdep and funModeling. If the package is not installed, it will do the installation before loading the package.
 
 ```{r}
-pacman::p_load(sf, tidyverse, tmap, spdep, funModeling)
+pacman::p_load(rgdal, spdep, tmap, sf, ClustGeo, ggpubr, cluster, factoextra, NbClust, heatmaply, corrplot, psych, tidyverse, GGally, funModeling)
 ```
 
 ## Importing Geospatial Data
+
+### Importing Water Point Geospatial Data into R
+
+Importing the data as simple feature into R
+
+#### Recoding NA into string and reducing file size for upload to Git
+
+This code chunk is reading the data from the shapefile downloaded from waterpointdata.org and filtering the rows of interest (information belonging to nigeria).
+
+It also helps to pick out the columns that are useful so that the rds file created will be smaller.
+
+The filtered data will then be written into a rds file that will be read for analysis. In this way, these steps can be omitted in the future runs as the data can be obtained from the rds file created.
+
+```{r}
+#| eval: false
+wp <- st_read(dsn = "data", layer = "geo_export", crs = 4326) %>% filter(clean_coun == "Nigeria")
+
+wp_1 <- wp %>% mutate(status_cle = replace_na(status_cle, "Unknown")) %>% mutate(X_water_tec = replace_na(X_water_tec, "Unknown")) %>% select(3:4, 9:11, 18:23, 47:48)
+
+wp_nga <- write_rds(wp_1, "geodata/wp_nga.rds")
+```
 
 ### Importing Water Point Geospatial Data into R
 
@@ -25,4 +46,547 @@ This code chunk will read the data from the rds file created previously in Take 
 wp_nga <- read_rds("geodata/wp_nga.rds")
 ```
 
+### Importing Nigeria Boundaries Geospatial Data into R
+
+This code chunk will import the Nigeria geographical boundaries from the shapefile downloaded from geoboundaries.org. This will be used for counting points in each polygon.
+
+```{r}
+nga <- st_read(dsn = "data", layer = "geoBoundaries-NGA-ADM2")
+```
+
 ## Data Wrangling
+
+```{r}
+freq(data = wp_nga, input = 'status_cle')
+```
+
+```{r}
+freq(data = wp_nga, input = 'X_water_tec')
+```
+
+```{r}
+freq(data = wp_nga, input = 'is_urban')
+```
+
+```{r}
+freq(data = wp_nga, input = 'usage_cap')
+```
+
+#### 'Funtional' waterpoint
+
+This code chunk will filter out rows that belong to functional waterpoints using the values identified from the 'status_cle' column.
+
+```{r}
+wpt_functional <- wp_nga %>%
+  filter(status_cle %in% c("Functional", "Functional but not in use", "Functional but need repair"))
+```
+
+```{r}
+freq(data = wpt_functional, input = "status_cle")
+```
+
+#### 'Non-Functional' waterpoint
+
+This code chunk will filter out rows that belong to non functional waterpoints using the values identified from the 'status_cle' column.
+
+```{r}
+wpt_nonfunctional <- wp_nga %>%
+  filter(status_cle %in% c("Abandoned/Decommissioned", "Abandoned", "Non-Functional", "Non functional due to dry season", "Non-Functional due to dry season"))
+```
+
+```{r}
+freq(data=wpt_nonfunctional, input = 'status_cle')
+```
+
+#### 'Unknown' waterpoint
+
+This code chunk will filter out rows that belong to unknown waterpoints using the values identified from the 'status_cle' column.
+
+```{r}
+wpt_unknown <- wp_nga %>% filter(status_cle == "Unknown")
+```
+
+```{r}
+freq(data=wpt_unknown, input = 'status_cle')
+```
+
+#### Main water point technology 'Hand Pump'
+
+```{r}
+wpt_handpump <- wp_nga %>% filter(X_water_tec == "Hand Pump")
+```
+
+```{r}
+freq(data=wpt_handpump, input = 'X_water_tec')
+```
+
+#### \<1000 Usage Cap
+
+```{r}
+wpt_lessThan1000 <- wp_nga %>% filter(usage_cap < 1000)
+```
+
+```{r}
+freq(data=wpt_lessThan1000, input = 'usage_cap')
+```
+
+#### \>=1000 Usage Cap
+
+```{r}
+wpt_moreThanEqual1000 <- wp_nga %>% filter(usage_cap >= 1000)
+```
+
+```{r}
+freq(data=wpt_moreThanEqual1000, input = 'usage_cap')
+```
+
+#### Rural Water Points
+
+```{r}
+wpt_rural <- wp_nga %>% filter(is_urban == "False")
+```
+
+```{r}
+freq(data=wpt_rural, input = 'is_urban')
+```
+
+### Points in each polygons
+
+This code chunk will count the number of waterpoints belong to each category in each polygon. It will count the number of points in each category that intersect with each boundary from the geoboundaries simple feature data frame.
+
+```{r}
+nga_wp <- nga %>% mutate(`total wpt` = lengths(st_intersects(nga, wp_nga))) %>% mutate(`wpt functional` = lengths(st_intersects(nga, wpt_functional))) %>% mutate(`wpt non-functional` = lengths(st_intersects(nga, wpt_nonfunctional))) %>% mutate(`wpt unknown` = lengths(st_intersects(nga, wpt_unknown))) %>% mutate(`wpt hand pump` = lengths(st_intersects(nga, wpt_handpump))) %>% mutate(`wpt hand pump` = lengths(st_intersects(nga, wpt_handpump))) %>% mutate(`wpt less than 1000` = lengths(st_intersects(nga, wpt_lessThan1000))) %>% mutate(`wpt more than 1000` = lengths(st_intersects(nga, wpt_moreThanEqual1000))) %>% mutate(`wpt rural` = lengths(st_intersects(nga, wpt_rural)))
+```
+
+```{r}
+nga_wp <- nga_wp %>% mutate(pct_functional = `wpt functional`/`total wpt`) %>% mutate(`pct_non-functional` = `wpt non-functional`/`total wpt`)  %>% mutate(`pct_handpump` = `wpt hand pump`/`total wpt`)  %>% mutate(`pct_lessthan1000` = `wpt less than 1000`/`total wpt`)  %>% mutate(`pct_morethanequal1000` = `wpt more than 1000`/`total wpt`)  %>% mutate(`pct_rural` = `wpt rural`/`total wpt`)
+```
+
+```{r}
+nga_wp <- nga_wp %>% mutate(pct_functional = replace_na(pct_functional, 0)) %>% mutate(`pct_non-functional` = replace_na(`pct_non-functional`, 0)) %>% mutate(`pct_handpump` = replace_na(`pct_handpump`, 0)) %>% mutate(`pct_lessthan1000` = replace_na(`pct_lessthan1000`, 0)) %>% mutate(`pct_morethanequal1000` = replace_na(`pct_morethanequal1000`, 0)) %>% mutate(`pct_rural` = replace_na(`pct_rural`, 0))
+```
+
+```{r}
+#| eval: false
+write_rds(nga_wp, "geodata/nga_wp.rds")
+```
+
+```{r}
+nga_wp <- read_rds("geodata/nga_wp.rds")
+```
+
+```{r}
+total <- qtm(nga_wp, "total wpt")
+wp_functional <- qtm(nga_wp, "wpt functional")
+wp_nonfunctional <- qtm(nga_wp, "wpt non-functional")
+wp_unknown <- qtm(nga_wp, "wpt unknown")
+wp_handpump <- qtm(nga_wp, "wpt hand pump")
+wp_lessthan1000 <- qtm(nga_wp, "wpt less than 1000")
+wp_morethan1000 <- qtm(nga_wp, "wpt more than 1000")
+wp_rural <- qtm(nga_wp, "wpt rural")
+tmap_arrange(total, wp_functional, wp_nonfunctional, wp_unknown, wp_handpump, wp_lessthan1000, wp_morethan1000, wp_rural, asp=1, ncol=2)
+```
+
+## Exploratory Data Analysis (EDA)
+
+```{r}
+summary(nga_wp)
+```
+
+```{r}
+functional <- ggplot(data=nga_wp, 
+       aes(x=`wpt functional`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue")
+```
+
+```{r}
+nonfunctional <- ggplot(data=nga_wp, 
+       aes(x=`wpt non-functional`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue")
+```
+
+```{r}
+handpump <- ggplot(data=nga_wp, 
+       aes(x=`wpt hand pump`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue")
+```
+
+```{r}
+lessthan1000 <- ggplot(data=nga_wp, 
+       aes(x=`wpt less than 1000`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue")
+```
+
+```{r}
+morethan1000 <- ggplot(data=nga_wp, 
+       aes(x=`wpt more than 1000`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue")
+```
+
+```{r}
+rural <- ggplot(data=nga_wp, 
+       aes(x=`wpt rural`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue")
+```
+
+```{r}
+ggarrange(functional, nonfunctional, handpump, lessthan1000, morethan1000, rural, 
+          ncol = 3, 
+          nrow = 2)
+```
+
+### EDA using choropleth map
+
+```{r}
+wp_functional
+```
+
+```{r}
+wp_nonfunctional
+```
+
+```{r}
+wp_handpump
+```
+
+```{r}
+wp_lessthan1000
+```
+
+```{r}
+wp_morethan1000
+```
+
+```{r}
+wp_rural
+```
+
+## Correlation Analysis
+
+```{r}
+nga_wp_cor <- nga_wp %>% st_set_geometry(NULL)
+cluster_vars.cor = cor(nga_wp_cor[,6:19])
+corrplot.mixed(cluster_vars.cor,
+         lower = "ellipse", 
+               upper = "number",
+               tl.pos = "lt",
+               diag = "l",
+               tl.col = "black")
+```
+
+## Hierarchy Cluster Analysis
+
+### Extrating clustering variables
+
+```{r}
+cluster_vars <- nga_wp %>%
+  st_set_geometry(NULL) %>%
+  select("shapeName", "wpt non-functional", "wpt hand pump", "wpt more than 1000", "pct_functional", "pct_non-functional", "pct_handpump", "pct_lessthan1000", "pct_morethanequal1000", "pct_rural")
+cluster_vars <- distinct(cluster_vars, shapeName, .keep_all = TRUE)
+head(cluster_vars,10)
+```
+
+```{r}
+row.names(cluster_vars) <- cluster_vars$shapeName
+head(cluster_vars,10)
+```
+
+```{r}
+nga_ict <- select(cluster_vars, c(2:10))
+head(nga_ict, 10)
+```
+
+### Data Standardisation
+
+### Min-Max standardisation
+
+```{r}
+nga_ict.std <- normalize(nga_ict)
+summary(nga_ict.std)
+```
+
+### Z-score standardisation
+
+```{r}
+nga_ict.z <- scale(nga_ict)
+describe(nga_ict.z)
+```
+
+```{r}
+r <- ggplot(data=nga_ict, 
+             aes(x= `pct_functional`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  ggtitle("Raw values without standardisation")
+
+nga_ict_s_df <- as.data.frame(nga_ict.std)
+s <- ggplot(data=nga_ict_s_df, 
+       aes(x=`pct_functional`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  ggtitle("Min-Max Standardisation")
+
+nga_ict_z_df <- as.data.frame(nga_ict.z)
+z <- ggplot(data=nga_ict_z_df, 
+       aes(x=`pct_functional`)) +
+  geom_histogram(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  ggtitle("Z-score Standardisation")
+
+ggarrange(r, s, z,
+          ncol = 3,
+          nrow = 1)
+```
+
+```{r}
+r <- ggplot(data=nga_ict, 
+             aes(x= `pct_functional`)) +
+  geom_density(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  ggtitle("Raw values without standardisation")
+
+nga_ict_s_df <- as.data.frame(nga_ict.std)
+s <- ggplot(data=nga_ict_s_df, 
+       aes(x=`pct_functional`)) +
+  geom_density(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  ggtitle("Min-Max Standardisation")
+
+nga_ict_z_df <- as.data.frame(nga_ict.z)
+z <- ggplot(data=nga_ict_z_df, 
+       aes(x=`pct_functional`)) +
+  geom_density(bins=20, 
+                 color="black", 
+                 fill="light blue") +
+  ggtitle("Z-score Standardisation")
+
+ggarrange(r, s, z,
+          ncol = 3,
+          nrow = 1)
+```
+
+### Computing proximity matrix
+
+```{r}
+proxmat <- dist(nga_ict, method = 'euclidean')
+```
+
+```{r}
+proxmat
+```
+
+### Computing hierarchical clustering
+
+```{r}
+hclust_ward <- hclust(proxmat, method = 'ward.D')
+```
+
+```{r}
+plot(hclust_ward, cex = 0.6)
+```
+
+### Selecting the optimal clustering algorithm
+
+```{r}
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+ac <- function(x) {
+  agnes(nga_ict, method = x)$ac
+}
+
+map_dbl(m, ac)
+```
+
+### Determining Optimal Clusters
+
+#### Gap Statistic Method
+
+```{r}
+set.seed(12345)
+gap_stat <- clusGap(nga_ict, 
+                    FUN = hcut, 
+                    nstart = 25, 
+                    K.max = 10, 
+                    B = 50)
+# Print the result
+print(gap_stat, method = "firstmax")
+```
+
+```{r}
+fviz_gap_stat(gap_stat)
+```
+
+### Interpreting the dendrograms
+
+```{r}
+plot(hclust_ward, cex = 0.6)
+rect.hclust(hclust_ward, 
+            k = 9, 
+            border = 2:5)
+```
+
+### Visually-driven hierarchical clustering analysis
+
+#### Transforming the data frame into a matrix
+
+```{r}
+nga_ict_mat <- data.matrix(nga_ict)
+```
+
+#### Plotting interactive cluster heatmap using *heatmaply()*
+
+```{r}
+heatmaply(normalize(nga_ict_mat),
+          Colv=NA,
+          dist_method = "euclidean",
+          hclust_method = "ward.D",
+          seriate = "OLO",
+          colors = Blues,
+          k_row = 9,
+          margins = c(NA,200,60,NA),
+          fontsize_row = 4,
+          fontsize_col = 5,
+          main="Geographic Segmentation of Nga State by ICT indicators",
+          xlab = "ICT Indicators",
+          ylab = "Townships of Nga State"
+          )
+```
+
+### Mapping the clusters formed
+
+```{r}
+groups <- as.factor(cutree(hclust_ward, k=9))
+```
+
+```{r}
+nga_wp_distinct <- distinct(nga_wp, shapeName, .keep_all = TRUE)
+```
+
+```{r}
+nga_sf_cluster <- cbind(nga_wp_distinct, as.matrix(groups)) %>%
+  rename(`CLUSTER`=`as.matrix.groups.`)
+```
+
+```{r}
+qtm(nga_sf_cluster, "CLUSTER")
+```
+
+## Spatially Constrained Clustering: SKATER approach
+
+### Converting into SpatialPolygonsDataFrame
+
+```{r}
+nga_sp <- as_Spatial(nga_wp)
+```
+
+### Computing Neighbour List
+
+```{r}
+nga.nb <- poly2nb(nga_sp)
+summary(nga.nb)
+```
+
+```{r}
+plot(nga_sp, 
+     border=grey(.5))
+plot(nga.nb, 
+     coordinates(nga_sp), 
+     col="blue", 
+     add=TRUE)
+```
+
+## Spatially Constrained Clustering: ClustGeo Method
+
+### Ward-like hierarchical clustering: ClustGeo
+
+```{r}
+nongeo_cluster <- hclustgeo(proxmat)
+plot(nongeo_cluster, cex = 0.5)
+rect.hclust(nongeo_cluster, 
+            k = 9, 
+            border = 2:5)
+```
+
+#### Mapping the clusters formed
+
+```{r}
+groups <- as.factor(cutree(nongeo_cluster, k=9))
+```
+
+```{r}
+nga_sf_ngeo_cluster <- cbind(nga_wp_distinct, as.matrix(groups)) %>%
+  rename(`CLUSTER` = `as.matrix.groups.`)
+```
+
+```{r}
+qtm(nga_sf_ngeo_cluster, "CLUSTER")
+```
+
+### Spatially Constrained Hierarchical Clustering
+
+```{r}
+dist <- st_distance(nga_wp_distinct, nga_wp_distinct)
+distmat <- as.dist(dist)
+```
+
+```{r}
+cr <- choicealpha(proxmat, distmat, range.alpha = seq(0, 1, 0.1), K=9, graph = TRUE)
+```
+
+```{r}
+clustG <- hclustgeo(proxmat, distmat, alpha = 0.2)
+```
+
+```{r}
+groups <- as.factor(cutree(clustG, k=9))
+```
+
+```{r}
+nga_sf_Gcluster <- cbind(nga_wp_distinct, as.matrix(groups)) %>%
+  rename(`CLUSTER` = `as.matrix.groups.`)
+```
+
+```{r}
+qtm(nga_sf_Gcluster, "CLUSTER")
+```
+
+## Visual Interpretation of Clusters
+
+### Visualising individual clustering variable
+
+```{r}
+ggplot(data = nga_sf_ngeo_cluster,
+       aes(x = CLUSTER, y = `wpt.functional`)) +
+  geom_boxplot()
+```
+
+### Multivariate Visualisation
+
+```{r}
+ggparcoord(data = nga_sf_ngeo_cluster, 
+           columns = c(6:19), 
+           scale = "globalminmax",
+           alphaLines = 0.2,
+           boxplot = TRUE, 
+           title = "Multiple Parallel Coordinates Plots of ICT Variables by Cluster") +
+  facet_grid(~ CLUSTER) + 
+  theme(axis.text.x = element_text(angle = 30))
+```
