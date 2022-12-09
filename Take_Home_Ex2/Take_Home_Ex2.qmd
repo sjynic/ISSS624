@@ -9,7 +9,7 @@ This is take home exercise 2
 
 ## Getting Started
 
-This code chunk will load the package sf, tidyverse, tmap, spdep and funModeling. If the package is not installed, it will do the installation before loading the package.
+This code chunk will load the package rgdal, spdep, tmap, sf, clustGeo, ggpubr, cluster, factoextra, NbClust, heatmaply, corrploy, psych, tidyverse, GGally and funModeling. If the package is not installed, it will do the installation before loading the package.
 
 ```{r}
 pacman::p_load(rgdal, spdep, tmap, sf, ClustGeo, ggpubr, cluster, factoextra, NbClust, heatmaply, corrplot, psych, tidyverse, GGally, funModeling)
@@ -56,21 +56,39 @@ nga <- st_read(dsn = "data", layer = "geoBoundaries-NGA-ADM2")
 
 ## Data Wrangling
 
+It is important to visualize the data to see the distribution of each variable but diving in to do any analysis.
+
+This code chunk will show the distribution of the values in the variable 'status_cle'.
+
 ```{r}
 freq(data = wp_nga, input = 'status_cle')
 ```
+
+As shown in the bar graph, the values can be classified into 3 categories namely the 'functional' category containing 'Functional', 'Functional but needs repair' and 'Functional but not in use'; 'non-functional' category' containing 'Non-Functional', 'Non-Functional due to dry season', 'Abandoned/Decommissioned', 'Abandoned' and 'Non functional due to dry season'; 'Unknown' category containing 'Unknown'.
+
+This code chunk will show the distribution of the values in the variable 'X_water_tec.
 
 ```{r}
 freq(data = wp_nga, input = 'X_water_tec')
 ```
 
+The bar chart shows the distribution of each technology of the water point. 'Hand Pump' is the majority and they can be grouped by 'Hand Pump' and 'Others'.
+
+This code chunk will show the distribution of the values in the variable 'is_urban'.
+
 ```{r}
 freq(data = wp_nga, input = 'is_urban')
 ```
 
+The bar chart shows that approximately 80% of the water points are located at rural areas.
+
+This code chunk will show the distribution of the values in the variable 'usage_cap'.
+
 ```{r}
 freq(data = wp_nga, input = 'usage_cap')
 ```
+
+Majority of the water points fall within the 1000 and 300 usage capacity. Therefore, the water points can be divided in to less than 1000 usage capacity and more than or equal to 1000 usage capacity.
 
 #### 'Funtional' waterpoint
 
@@ -112,6 +130,8 @@ freq(data=wpt_unknown, input = 'status_cle')
 
 #### Main water point technology 'Hand Pump'
 
+This code chunk will filter out rows that belong to waterpoints that are hand pumps using the values identified from the 'X_water_tec' column.
+
 ```{r}
 wpt_handpump <- wp_nga %>% filter(X_water_tec == "Hand Pump")
 ```
@@ -121,6 +141,8 @@ freq(data=wpt_handpump, input = 'X_water_tec')
 ```
 
 #### \<1000 Usage Cap
+
+This code chunk will filter out rows that belong to waterpoints with less than 1000 usage capacity using the values identified from the 'usage_cap' column.
 
 ```{r}
 wpt_lessThan1000 <- wp_nga %>% filter(usage_cap < 1000)
@@ -132,6 +154,8 @@ freq(data=wpt_lessThan1000, input = 'usage_cap')
 
 #### \>=1000 Usage Cap
 
+This code chunk will filter out rows that belong to waterpoints with more than or equal to 1000 usage capacity using the values identified from the 'usage_cap' column.
+
 ```{r}
 wpt_moreThanEqual1000 <- wp_nga %>% filter(usage_cap >= 1000)
 ```
@@ -141,6 +165,8 @@ freq(data=wpt_moreThanEqual1000, input = 'usage_cap')
 ```
 
 #### Rural Water Points
+
+This code chunk will filter out rows that belong to rural waterpoints using the values identified from the 'is_urban' column.
 
 ```{r}
 wpt_rural <- wp_nga %>% filter(is_urban == "False")
@@ -158,13 +184,19 @@ This code chunk will count the number of waterpoints belong to each category in 
 nga_wp <- nga %>% mutate(`total wpt` = lengths(st_intersects(nga, wp_nga))) %>% mutate(`wpt functional` = lengths(st_intersects(nga, wpt_functional))) %>% mutate(`wpt non-functional` = lengths(st_intersects(nga, wpt_nonfunctional))) %>% mutate(`wpt unknown` = lengths(st_intersects(nga, wpt_unknown))) %>% mutate(`wpt hand pump` = lengths(st_intersects(nga, wpt_handpump))) %>% mutate(`wpt hand pump` = lengths(st_intersects(nga, wpt_handpump))) %>% mutate(`wpt less than 1000` = lengths(st_intersects(nga, wpt_lessThan1000))) %>% mutate(`wpt more than 1000` = lengths(st_intersects(nga, wpt_moreThanEqual1000))) %>% mutate(`wpt rural` = lengths(st_intersects(nga, wpt_rural)))
 ```
 
+This code chunk will create additional column that show percentage of each category to the data frame.
+
 ```{r}
 nga_wp <- nga_wp %>% mutate(pct_functional = `wpt functional`/`total wpt`) %>% mutate(`pct_non-functional` = `wpt non-functional`/`total wpt`)  %>% mutate(`pct_handpump` = `wpt hand pump`/`total wpt`)  %>% mutate(`pct_lessthan1000` = `wpt less than 1000`/`total wpt`)  %>% mutate(`pct_morethanequal1000` = `wpt more than 1000`/`total wpt`)  %>% mutate(`pct_rural` = `wpt rural`/`total wpt`)
 ```
 
+This code chunk will recode the NaN value in the data frame to 0 in the various columns
+
 ```{r}
 nga_wp <- nga_wp %>% mutate(pct_functional = replace_na(pct_functional, 0)) %>% mutate(`pct_non-functional` = replace_na(`pct_non-functional`, 0)) %>% mutate(`pct_handpump` = replace_na(`pct_handpump`, 0)) %>% mutate(`pct_lessthan1000` = replace_na(`pct_lessthan1000`, 0)) %>% mutate(`pct_morethanequal1000` = replace_na(`pct_morethanequal1000`, 0)) %>% mutate(`pct_rural` = replace_na(`pct_rural`, 0))
 ```
+
+This code chunk will write the resulting data frame into a rds file that can be read in the future so that the steps in cleaning the data can be skipped.
 
 ```{r}
 #| eval: false
@@ -174,6 +206,8 @@ write_rds(nga_wp, "geodata/nga_wp.rds")
 ```{r}
 nga_wp <- read_rds("geodata/nga_wp.rds")
 ```
+
+This code chunk assigned each of the map to an variable name so that they can be called again and arranged side by side for comparison.
 
 ```{r}
 total <- qtm(nga_wp, "total wpt")
@@ -189,9 +223,15 @@ tmap_arrange(total, wp_functional, wp_nonfunctional, wp_unknown, wp_handpump, wp
 
 ## Exploratory Data Analysis (EDA)
 
+Exploratory data analysis is done by looking at the distributions of the data. Information such as mean, medium, interquartile range, min/max can be obtained.
+
+This code chunk will generate a summary of the data frame.
+
 ```{r}
 summary(nga_wp)
 ```
+
+The next few code chunks will assigned the histogram plot of each variable to a variable name to be called again and arranged side by side for comparison.
 
 ```{r}
 functional <- ggplot(data=nga_wp, 
@@ -241,6 +281,8 @@ rural <- ggplot(data=nga_wp,
                  fill="light blue")
 ```
 
+This code chunk will arranged the histogram plots side by side for comparison.
+
 ```{r}
 ggarrange(functional, nonfunctional, handpump, lessthan1000, morethan1000, rural, 
           ncol = 3, 
@@ -248,6 +290,10 @@ ggarrange(functional, nonfunctional, handpump, lessthan1000, morethan1000, rural
 ```
 
 ### EDA using choropleth map
+
+This distribution can also be visualized using a chloropleth map.
+
+The next few code chunk will draw an choropleth map for each variable showing the distributions.
 
 ```{r}
 wp_functional
@@ -275,6 +321,10 @@ wp_rural
 
 ## Correlation Analysis
 
+When doing clustering, it is important to avoid attributes that are highly correlated. Therefore, to avoid highly correlated attributes, correlation analysis needs to be done to identified highly correlated attributes and select one of the correlated attributes for clustering.
+
+This code chunk will run each attribute with all the attributes to see the degree of correlation.
+
 ```{r}
 nga_wp_cor <- nga_wp %>% st_set_geometry(NULL)
 cluster_vars.cor = cor(nga_wp_cor[,6:19])
@@ -286,31 +336,45 @@ corrplot.mixed(cluster_vars.cor,
                tl.col = "black")
 ```
 
+As shown in the correlation table, hand pump, less than 1000 usage capacity, functional and rural are highly correlated. It might be that water points that use hand pump technology are mostly functional due to it being simple and mechanical. Hand pump are also small in usage capacity and used in rural area due to it being simple and cheap. Therefore, it will be wise to exclude functional, less than 1000 usage capacity and rural from the clustering as they can be represented by hand pump.
+
 ## Hierarchy Cluster Analysis
 
-### Extrating clustering variables
+Clustering gives a good overview of areas with common features and aids in planning.
+
+### Extracting clustering variables
+
+This code chunk will select the variables that will be used for the clustering. It will also remove duplicate states.
 
 ```{r}
 cluster_vars <- nga_wp %>%
   st_set_geometry(NULL) %>%
-  select("shapeName", "wpt non-functional", "wpt hand pump", "wpt more than 1000", "pct_functional", "pct_non-functional", "pct_handpump", "pct_lessthan1000", "pct_morethanequal1000", "pct_rural")
+  select("shapeName", "wpt non-functional", "wpt hand pump", "wpt more than 1000", "pct_functional", "pct_non-functional", "pct_handpump", "pct_lessthan1000", "pct_morethanequal1000")
 cluster_vars <- distinct(cluster_vars, shapeName, .keep_all = TRUE)
 head(cluster_vars,10)
 ```
+
+This code chunk will make the state name as the index.
 
 ```{r}
 row.names(cluster_vars) <- cluster_vars$shapeName
 head(cluster_vars,10)
 ```
 
+This code chunk will exclude the state name from the data frame.
+
 ```{r}
-nga_ict <- select(cluster_vars, c(2:10))
+nga_ict <- select(cluster_vars, c(2:9))
 head(nga_ict, 10)
 ```
 
 ### Data Standardisation
 
+To avoid biased against variable with small values, it is important to do standardisation so that the variables are in the same range.
+
 ### Min-Max standardisation
+
+This code chunk will standardise the data using the min and max value of each variable. It change the value to be relative to the min and max value.
 
 ```{r}
 nga_ict.std <- normalize(nga_ict)
@@ -319,10 +383,14 @@ summary(nga_ict.std)
 
 ### Z-score standardisation
 
+This code chunk will standardize the data by changing the value into Z-score.
+
 ```{r}
 nga_ict.z <- scale(nga_ict)
 describe(nga_ict.z)
 ```
+
+This code chunk will plot the histogram of the raw data, min/max standardised data and the Z-score standardised data side by side for comparison.
 
 ```{r}
 r <- ggplot(data=nga_ict, 
@@ -352,6 +420,8 @@ ggarrange(r, s, z,
           ncol = 3,
           nrow = 1)
 ```
+
+This code chunk will plot the density graph of the raw data, min/max standardised data and the Z-score standardised data side by side for comparison.
 
 ```{r}
 r <- ggplot(data=nga_ict, 
@@ -384,6 +454,8 @@ ggarrange(r, s, z,
 
 ### Computing proximity matrix
 
+This code chunk will calculate the proximity of each state using the 'Euclidean' distance based on the selected attributes.
+
 ```{r}
 proxmat <- dist(nga_ict, method = 'euclidean')
 ```
@@ -394,15 +466,23 @@ proxmat
 
 ### Computing hierarchical clustering
 
+This code chunk will then use the calculated proximity matrix to do the hierarchical clustering using the ward method.
+
 ```{r}
 hclust_ward <- hclust(proxmat, method = 'ward.D')
 ```
+
+This code chunk will plot out the dendrogram of the resulting hierarchical clustering.
 
 ```{r}
 plot(hclust_ward, cex = 0.6)
 ```
 
 ### Selecting the optimal clustering algorithm
+
+Hierarchical clustering can be done using various method such as average, single, complete and ward. It is importand to choose the method that gives the most optimal clustering that result in minimal diffference within each cluster and maximum difference between each cluster.
+
+This code chunk will map each method to its agglomerative coefficients.
 
 ```{r}
 m <- c( "average", "single", "complete", "ward")
@@ -415,9 +495,13 @@ ac <- function(x) {
 map_dbl(m, ac)
 ```
 
+As shown in the output, ward method will be the best method for the clustering as it shows to be the strongest clustering structure.
+
 ### Determining Optimal Clusters
 
 #### Gap Statistic Method
+
+This code chunk will calculated the intra-cluster variation for the different number of clusters formed.
 
 ```{r}
 set.seed(12345)
@@ -430,16 +514,22 @@ gap_stat <- clusGap(nga_ict,
 print(gap_stat, method = "firstmax")
 ```
 
+This code chunk will plot out the gap statistics calculated.
+
 ```{r}
 fviz_gap_stat(gap_stat)
 ```
 
+10 clusters will be optimal as shown as it gives the largest gap statistic.
+
 ### Interpreting the dendrograms
+
+This code chunk will plot the resulting hierarchical cluster using the ward method and separate them into 9 clusters.
 
 ```{r}
 plot(hclust_ward, cex = 0.6)
 rect.hclust(hclust_ward, 
-            k = 9, 
+            k = 10, 
             border = 2:5)
 ```
 
@@ -447,11 +537,15 @@ rect.hclust(hclust_ward,
 
 #### Transforming the data frame into a matrix
 
+This code chunk will transform the data frame for the clustering into a matrix
+
 ```{r}
 nga_ict_mat <- data.matrix(nga_ict)
 ```
 
 #### Plotting interactive cluster heatmap using *heatmaply()*
+
+This code chunk will plot the matrix into a heat map.
 
 ```{r}
 heatmaply(normalize(nga_ict_mat),
@@ -460,7 +554,7 @@ heatmaply(normalize(nga_ict_mat),
           hclust_method = "ward.D",
           seriate = "OLO",
           colors = Blues,
-          k_row = 9,
+          k_row = 10,
           margins = c(NA,200,60,NA),
           fontsize_row = 4,
           fontsize_col = 5,
@@ -472,26 +566,38 @@ heatmaply(normalize(nga_ict_mat),
 
 ### Mapping the clusters formed
 
+This code chunk will cut the hierarchical cluster dendrogram where it form 10 clusters.
+
 ```{r}
-groups <- as.factor(cutree(hclust_ward, k=9))
+groups <- as.factor(cutree(hclust_ward, k=10))
 ```
+
+This code chunk will remove duplicate states from the initial data frame.
 
 ```{r}
 nga_wp_distinct <- distinct(nga_wp, shapeName, .keep_all = TRUE)
 ```
+
+This code chunk will map the states to its respective matrix.
 
 ```{r}
 nga_sf_cluster <- cbind(nga_wp_distinct, as.matrix(groups)) %>%
   rename(`CLUSTER`=`as.matrix.groups.`)
 ```
 
+This code chunk will draw the map of the resulting clusters.
+
 ```{r}
 qtm(nga_sf_cluster, "CLUSTER")
 ```
 
+The clusters are sparsely distributed and no homogenous cluster can be seen. Therefore, additional constraints such as spatial constraint can be apply so that the clusters will be more homogenous.
+
 ## Spatially Constrained Clustering: SKATER approach
 
 ### Converting into SpatialPolygonsDataFrame
+
+This code chunk will convert the data frame into a spatial data frame
 
 ```{r}
 nga_sp <- as_Spatial(nga_wp)
@@ -499,10 +605,16 @@ nga_sp <- as_Spatial(nga_wp)
 
 ### Computing Neighbour List
 
+This code chunk will calculate the number of neighbors for each polygon using the queen method.
+
 ```{r}
 nga.nb <- poly2nb(nga_sp)
 summary(nga.nb)
 ```
+
+As there is region with no neighbor, it will not be able to use SKATER to introduce spatial constraint into the clustering.
+
+This code chunk will plot the connections of the polygons
 
 ```{r}
 plot(nga_sp, 
@@ -517,24 +629,32 @@ plot(nga.nb,
 
 ### Ward-like hierarchical clustering: ClustGeo
 
+This code chunk will do a hierarchical clustering using the proximity matrix.
+
 ```{r}
 nongeo_cluster <- hclustgeo(proxmat)
 plot(nongeo_cluster, cex = 0.5)
 rect.hclust(nongeo_cluster, 
-            k = 9, 
+            k = 10, 
             border = 2:5)
 ```
 
 #### Mapping the clusters formed
 
+This code chunk will cut the hierarchical cluster dendrogram where it form 10 clusters.
+
 ```{r}
-groups <- as.factor(cutree(nongeo_cluster, k=9))
+groups <- as.factor(cutree(nongeo_cluster, k=10))
 ```
+
+This code chunk will map the states to its respective matrix.
 
 ```{r}
 nga_sf_ngeo_cluster <- cbind(nga_wp_distinct, as.matrix(groups)) %>%
   rename(`CLUSTER` = `as.matrix.groups.`)
 ```
+
+This code chunk will draw the map of the resulting clusters.
 
 ```{r}
 qtm(nga_sf_ngeo_cluster, "CLUSTER")
@@ -542,41 +662,63 @@ qtm(nga_sf_ngeo_cluster, "CLUSTER")
 
 ### Spatially Constrained Hierarchical Clustering
 
+To perform spatially constrained hierarchical clustering, it is important to derive a spatial distance matrix.
+
+This code chunk will generate the spatial distance matrix.
+
 ```{r}
 dist <- st_distance(nga_wp_distinct, nga_wp_distinct)
 distmat <- as.dist(dist)
 ```
 
+This code chunk will be used to determine a suitable value for the mixing parameter alpha.
+
 ```{r}
-cr <- choicealpha(proxmat, distmat, range.alpha = seq(0, 1, 0.1), K=9, graph = TRUE)
+cr <- choicealpha(proxmat, distmat, range.alpha = seq(0, 1, 0.1), K=10, graph = TRUE)
 ```
+
+The graph shows that alpha 0.2 will be good as it allows a mere 10 percent decrease in weight of the spatial constraint and gain 90 percent in weight of the attributes for the clustering.
+
+This code chunk will generate the hierarchical cluster using the proximity matrix, distance matrix and alpha 0.2.
 
 ```{r}
 clustG <- hclustgeo(proxmat, distmat, alpha = 0.2)
 ```
 
+This code chunk will cut the hierarchical cluster dendrogram where it form 10 clusters.
+
 ```{r}
-groups <- as.factor(cutree(clustG, k=9))
+groups <- as.factor(cutree(clustG, k=10))
 ```
+
+This code chunk will map the states to its respective matrix.
 
 ```{r}
 nga_sf_Gcluster <- cbind(nga_wp_distinct, as.matrix(groups)) %>%
   rename(`CLUSTER` = `as.matrix.groups.`)
 ```
 
+This code chunk will draw the map of the resulting clusters.
+
 ```{r}
 qtm(nga_sf_Gcluster, "CLUSTER")
 ```
 
+A much more homogeneous clustering is shown when spatial constraint is applied.
+
 ## Visual Interpretation of Clusters
 
 ### Visualising individual clustering variable
+
+This code chunk will plot the box plot of the variable 'wpt_functional'.
 
 ```{r}
 ggplot(data = nga_sf_ngeo_cluster,
        aes(x = CLUSTER, y = `wpt.functional`)) +
   geom_boxplot()
 ```
+
+This plot shows that cluster 8 has the highest number of functional waterpoints.
 
 ### Multivariate Visualisation
 
