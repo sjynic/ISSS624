@@ -108,3 +108,27 @@ condo.mlr <- lm(formula = SELLING_PRICE ~ AREA_SQM + AGE    +
                 data=condo_resale.sf)
 summary(condo.mlr)
 ```
+
+### Preparing Publication Quality Table: olsrr method
+
+It gives very tidy report to show the performance of the model
+
+```{r}
+condo.mlr1 <- lm(formula = SELLING_PRICE ~ AREA_SQM + AGE + 
+                   PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE +
+                   PROX_URA_GROWTH_AREA + PROX_MRT  + PROX_PARK + 
+                   PROX_PRIMARY_SCH + PROX_SHOPPING_MALL    + PROX_BUS_STOP + 
+                   NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD,
+                 data=condo_resale.sf)
+ols_regress(condo.mlr1)
+```
+
+The beta is based on 1 unit. Need to check the sign.
+
+### Preparing Publication Quality Table: gtsummary method
+
+```{r}
+tbl_regression(condo.mlr1, intercept = TRUE)
+```
+
+Check which attributes are significant by looking that the p-value to see if they are lesser than the significance value.
