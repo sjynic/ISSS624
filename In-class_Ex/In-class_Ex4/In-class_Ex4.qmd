@@ -221,6 +221,8 @@ gwr.adaptive <- gwr.basic(formula = SELLING_PRICE ~ AREA_SQM + AGE +
                           longlat = FALSE)
 ```
 
+If longlat = false, it will not convert the data frame to geometry as the data is already in geometry. Otherwise, it will show error.
+
 ```{r}
 gwr.adaptive
 ```
