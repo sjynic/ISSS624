@@ -107,3 +107,5 @@ Sensitivity = TP/(TP + FN)
 Specificity = TN/(TN + FP)
 
 Accuracy = (TP + TN)/(TP + TN + FP + FN)
+
+False Positive Rate = FP/(TN + FP)
