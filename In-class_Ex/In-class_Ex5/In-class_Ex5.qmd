@@ -109,3 +109,37 @@ Specificity = TN/(TN + FP)
 Accuracy = (TP + TN)/(TP + TN + FP + FN)
 
 False Positive Rate = FP/(TN + FP)
+
+Converting Simple Feature Data Frame to Simple Polygon/Point Data Frame
+
+```{r}
+osun_wp_sp <- osun_wp_sf_clean %>% 
+  select(c(status,
+           distance_to_primary_road,
+           distance_to_secondary_road,
+           distance_to_tertiary_road,
+           distance_to_city,
+           distance_to_town,
+           water_point_population,
+           local_population_1km,
+           usage_capacity,
+           is_urban,
+           water_source_clean)) %>% as_Spatial()
+osun_wp_sp
+```
+
+Longlat is set to false as the data is already in projected coordinate system.
+
+```{r}
+#| eval: false
+bw.fixed <- bw.ggwr(status ~ distance_to_primary_road +
+                 distance_to_secondary_road +
+                 distance_to_tertiary_road +
+                 distance_to_city +
+                 distance_to_town +
+                 water_point_population +
+                 local_population_1km +
+                 usage_capacity +
+                 is_urban +
+                 water_source_clean, data = osun_wp_sp, family = "binomial", approach = "AIC", kernel = "gaussian", adaptive = FALSE, longlat = FALSE)
+```
