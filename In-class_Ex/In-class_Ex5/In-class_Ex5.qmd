@@ -1,0 +1,109 @@
+---
+title: "In-class Exercise 5"
+editor: visual
+---
+
+## Overview
+
+This is in-class exercise 5.
+
+## Getting Started
+
+```{r}
+pacman::p_load(tidyverse, funModeling, blorr, corrplot, ggpubr, sf, spdep, GWmodel, tmap, skimr, caret)
+```
+
+## Geospatial Data Wrangling
+
+### Importing Geospatial Data
+
+```{r}
+osun <- read_rds("rds/Osun.rds")
+```
+
+```{r}
+osun_wp_sf <- read_rds("rds/Osun_wp_sf.rds")
+```
+
+```{r}
+osun_wp_sf %>% freq(input = 'status')
+```
+
+```{r}
+tmap_mode("view")
+tm_shape(osun) + tm_polygons(alpha = 0.4) + tm_shape(osun_wp_sf) + tm_dots(col = "status", alpha = 0.6) + tm_view(set.zoom.limits = c(9,12))
+```
+
+Summarize and give a good view of the data with just one line of code.
+
+```{r}
+osun_wp_sf %>% skim()
+```
+
+Checking for missing values from multiple variables and change the data type of usage_capacity from numeric to factor as it will be treated as continuous data type during logistic regression when it should be categorical
+
+```{r}
+osun_wp_sf_clean <- osun_wp_sf %>% 
+  filter_at(vars(status,
+                 distance_to_primary_road,
+                 distance_to_secondary_road,
+                 distance_to_tertiary_road,
+                 distance_to_city,
+                 distance_to_town,
+                 water_point_population,
+                 local_population_1km,
+                 usage_capacity,
+                 is_urban,
+                 water_source_clean), all_vars(!is.na(.))) %>% mutate(usage_capacity = as.factor(usage_capacity))
+```
+
+Drop the geometry column of the simple feature data frame.
+
+```{r}
+osun_wp <- osun_wp_sf_clean %>% select(c(7, 35:39, 42:43, 46:47, 57)) %>% st_set_geometry(NULL)
+```
+
+Checking for highly correlated variables.
+
+```{r}
+cluster_vars.cor = cor(osun_wp[,2:8])
+corrplot.mixed(cluster_vars.cor,
+         lower = "ellipse", 
+               upper = "number",
+               tl.pos = "lt",
+               diag = "l",
+               tl.col = "black")
+```
+
+```{r}
+model <- glm(status ~ distance_to_primary_road +
+                 distance_to_secondary_road +
+                 distance_to_tertiary_road +
+                 distance_to_city +
+                 distance_to_town +
+                 water_point_population +
+                 local_population_1km +
+                 usage_capacity +
+                 is_urban +
+                 water_source_clean, data = osun_wp_sf_clean, family = binomial(link = 'logit'))
+```
+
+Showing the result of the model
+
+```{r}
+model
+```
+
+```{r}
+blr_regress(model)
+```
+
+```{r}
+blr_confusion_matrix(model, cutoff = 0.5)
+```
+
+Sensitivity = TP/(TP + FN)
+
+Specificity = TN/(TN + FP)
+
+Accuracy = (TP + TN)/(TP + TN + FP + FN)
