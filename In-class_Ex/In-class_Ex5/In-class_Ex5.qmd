@@ -29,6 +29,8 @@ osun_wp_sf <- read_rds("rds/Osun_wp_sf.rds")
 osun_wp_sf %>% freq(input = 'status')
 ```
 
+## Point in Polygon Overlay
+
 ```{r}
 tmap_mode("view")
 tm_shape(osun) + tm_polygons(alpha = 0.4) + tm_shape(osun_wp_sf) + tm_dots(col = "status", alpha = 0.6) + tm_view(set.zoom.limits = c(9,12))
@@ -39,6 +41,8 @@ Summarize and give a good view of the data with just one line of code.
 ```{r}
 osun_wp_sf %>% skim()
 ```
+
+## Exploratory Data Analysis
 
 Checking for missing values from multiple variables and change the data type of usage_capacity from numeric to factor as it will be treated as continuous data type during logistic regression when it should be categorical
 
@@ -63,6 +67,8 @@ Drop the geometry column of the simple feature data frame.
 osun_wp <- osun_wp_sf_clean %>% select(c(7, 35:39, 42:43, 46:47, 57)) %>% st_set_geometry(NULL)
 ```
 
+## Correlation Analysis
+
 Checking for highly correlated variables.
 
 ```{r}
@@ -75,9 +81,23 @@ corrplot.mixed(cluster_vars.cor,
                tl.col = "black")
 ```
 
+## Building Logistic Regression Model
+
 ```{r}
 model <- glm(status ~ distance_to_primary_road +
                  distance_to_secondary_road +
+                 distance_to_tertiary_road +
+                 distance_to_city +
+                 distance_to_town +
+                 water_point_population +
+                 local_population_1km +
+                 usage_capacity +
+                 is_urban +
+                 water_source_clean, data = osun_wp_sf_clean, family = binomial(link = 'logit'))
+```
+
+```{r}
+model_revised <- glm(status ~ 
                  distance_to_tertiary_road +
                  distance_to_city +
                  distance_to_town +
@@ -95,11 +115,23 @@ model
 ```
 
 ```{r}
+model_revised
+```
+
+```{r}
 blr_regress(model)
 ```
 
 ```{r}
+blr_regress(model_revised)
+```
+
+```{r}
 blr_confusion_matrix(model, cutoff = 0.5)
+```
+
+```{r}
+blr_confusion_matrix(model_revised, cutoff = 0.5)
 ```
 
 Sensitivity = TP/(TP + FN)
@@ -109,6 +141,8 @@ Specificity = TN/(TN + FP)
 Accuracy = (TP + TN)/(TP + TN + FP + FN)
 
 False Positive Rate = FP/(TN + FP)
+
+## Building Geographical Weighted Logistic Regression Model
 
 Converting Simple Feature Data Frame to Simple Polygon/Point Data Frame
 
@@ -128,6 +162,22 @@ osun_wp_sp <- osun_wp_sf_clean %>%
 osun_wp_sp
 ```
 
+```{r}
+osun_wp_sp_revised <- osun_wp_sf_clean %>% 
+  select(c(status,
+           distance_to_tertiary_road,
+           distance_to_city,
+           distance_to_town,
+           water_point_population,
+           local_population_1km,
+           usage_capacity,
+           is_urban,
+           water_source_clean)) %>% as_Spatial()
+osun_wp_sp_revised
+```
+
+## Building Fixed Bandwidth GW
+
 Longlat is set to false as the data is already in projected coordinate system.
 
 ```{r}
@@ -142,4 +192,57 @@ bw.fixed <- bw.ggwr(status ~ distance_to_primary_road +
                  usage_capacity +
                  is_urban +
                  water_source_clean, data = osun_wp_sp, family = "binomial", approach = "AIC", kernel = "gaussian", adaptive = FALSE, longlat = FALSE)
+```
+
+```{r}
+#| eval: false
+bw.fixed <- bw.ggwr(status ~ 
+                 distance_to_tertiary_road +
+                 distance_to_city +
+                 distance_to_town +
+                 water_point_population +
+                 local_population_1km +
+                 usage_capacity +
+                 is_urban +
+                 water_source_clean, data = osun_wp_sp, family = "binomial", approach = "AIC", kernel = "gaussian", adaptive = FALSE, longlat = FALSE)
+```
+
+```{r}
+#| eval: false
+bw.fixed
+```
+
+Value return is the same as the projected coordinate system SI unit. In this case, the SI unit is in meters.
+
+```{r}
+gwlr.fixed <- ggwr.basic(status ~ 
+                 distance_to_tertiary_road +
+                 distance_to_city +
+                 distance_to_town +
+                 water_point_population +
+                 local_population_1km +
+                 usage_capacity +
+                 is_urban +
+                 water_source_clean, data = osun_wp_sp, bw = 2377.371, family = "binomial", kernel = "gaussian", adaptive = FALSE, longlat = FALSE)
+```
+
+```{r}
+gwlr.fixed
+```
+
+## Model Assessment
+
+```{r}
+gwr.fixed <- as.data.frame(gwlr.fixed$SDF)
+```
+
+```{r}
+gwr.fixed <- gwr.fixed %>% mutate(most = ifelse(gwr.fixed$yhat >= 0.5, T, F))
+```
+
+```{r}
+gwr.fixed$y <- as.factor(gwr.fixed$y)
+gwr.fixed$most <- as.factor(gwr.fixed$most)
+CM <- confusionMatrix(data = gwr.fixed$most, reference = gwr.fixed$y)
+CM
 ```
